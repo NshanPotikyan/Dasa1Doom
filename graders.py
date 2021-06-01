@@ -290,15 +290,6 @@ class Grader:
         if text == 'stop' or text == 'quit':
             quit()
 
-    # def press_enter():
-    #     """
-    #     This function is used to take an input from the user
-    #     :return: None if the input is 'quit' or 'stop', otherwise returns the input string
-    #     """
-    #     text = input('Press Enter to proceed: ')
-    #     quitter(text)
-    #     return text
-
     def _execute(self, repeat=False):
         """
         Controls the process of the code execution or providing the grade
