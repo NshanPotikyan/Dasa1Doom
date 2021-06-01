@@ -49,3 +49,11 @@ Code for the second problem (Code Cell)
 ...
 
 ```
+
+## TODO
+
+In future I will try to add the following features:
+
+* Check homeworks by running assertion blocks
+
+* Detect potential plagiarism using unsupervised learning techniques, such as clustering.
