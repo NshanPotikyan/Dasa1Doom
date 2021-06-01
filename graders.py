@@ -19,7 +19,7 @@ class Grader:
         self.student_ids = student_ids
         self.mode = mode
 
-        self.files = glob.glob(f'{path}/*ipynb')
+        self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
         assert len(self.files) > 0, "No files were found in the specified directory."
         self.nr_problems = nr_problems
 
