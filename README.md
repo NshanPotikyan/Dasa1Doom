@@ -56,4 +56,6 @@ In future I will try to add the following features:
 
 * Check homeworks by running assertion blocks
 
+* Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
+
 * Detect potential plagiarism using unsupervised learning techniques, such as clustering.
