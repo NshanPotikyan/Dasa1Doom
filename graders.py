@@ -72,7 +72,7 @@ class Grader:
 
                 # checking if the cell contains the problem description
                 # if starts with a number:
-                if cell.strip()[0].isdigit():
+                if self._contains_problem_statement(cell):
 
                     # check if the problem is already graded
                     try:
@@ -224,7 +224,7 @@ class Grader:
         counter = 0
         for i in range(nr_cells):
             cell = ut.join(cells[i]['source'])
-            if cell.strip()[0].isdigit():
+            if self._contains_problem_statement(cell):
                 counter += 0
         return counter
 
@@ -242,18 +242,17 @@ class Grader:
         grade = self._check_and_grade(code)
         comment = ''
 
+        disp_text = 'Enter a comment: '
         while True and grade != 'ignore':
             try:
-                comment = self._provide_feedback(input('Enter a comment: '))
+                comment = self._provide_feedback(self._get_input(disp_text))
             except UnicodeDecodeError:
                 # happens sometimes when commenting in Armenian
-                comment = self._provide_feedback(input('Enter a comment: '))
+                comment = self._provide_feedback(self._get_input(disp_text))
             break
         return grade, comment
 
-
-    @staticmethod
-    def get_ith_problem(cells, problem_number):
+    def get_ith_problem(self, cells, problem_number):
         """
         Finds the cell of a particular problem with its index
         :param cells: list of notebook cells (str)
@@ -261,8 +260,16 @@ class Grader:
         :return: int of the cell index containing the requested problem
         """
         i = problem_number
-        return [num for num in range(len(cells)) if cells[num].strip().startswith(f'{i}')][0]
+        return [num for num in range(len(cells)) if self._contains_ith_problem_statement(cell=cells[num], i=i)][0]
 
+    def grades_to_txt(self):
+        """
+        Writing the total grades of the students to a .txt file
+        :return:
+        """
+        with open(os.path.join(self.path, 'results.txt'), 'w') as f:
+            for name, i in self.student_ids.items():
+                f.write(f'{i}  {name}   {self.grade_dict.get(name, 0)}\n')
 
     @staticmethod
     def _provide_feedback(comment):
@@ -290,6 +297,25 @@ class Grader:
         if text == 'stop' or text == 'quit':
             quit()
 
+    @staticmethod
+    def _contains_problem_statement(cell):
+        """Checks if the cell contains the problem description
+        :param cell: str for notebook cell
+        :return: bool
+        """
+        cell = cell.strip()
+        return cell[0].isdigit() or cell.startswith('Problem')
+
+    @staticmethod
+    def _contains_ith_problem_statement(cell, i):
+        """Checks if the cell contains the ith problem description
+        :param cell: str for notebook cell
+        :param i: int for the problem index
+        :return: bool
+        """
+        cell = cell.strip()
+        return cell.startswith(f'{i}') or cell.startswith(f'Problem{i}')
+
     def _execute(self, repeat=False):
         """
         Controls the process of the code execution or providing the grade
@@ -303,8 +329,9 @@ class Grader:
         else:
             disp_text = disp_text.format('repeat')
 
-        text = input(disp_text)
-        self._quitter(text)
+        # text = input(disp_text)
+        # self._quitter(text)
+        text = self._get_input(disp_text)
 
         if text != '' and text != 'ignore':
             try:
@@ -343,12 +370,13 @@ class Grader:
             if grade:
                 return grade
 
-    def grades_to_txt(self):
+    def _get_input(self, disp_text):
         """
-        Writing the total grades of the students to a .txt file
+        Enables the user to enter an input.
+        The program finishes if the input is 'quit' or 'stop'
+        :param disp_text:
         :return:
         """
-        with open(os.path.join(self.path, 'results.txt'), 'w') as f:
-            for name, i in self.student_ids.items():
-                f.write(f'{i}  {name}   {self.grade_dict.get(name, 0)}\n')
-
+        text = input(disp_text)
+        self._quitter(text)
+        return text
