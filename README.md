@@ -20,7 +20,7 @@ python main.py
 4. You can pass some of the configs directly to the script, for example:
 
 ```bash
-python main.py --path=sample_homeworks --mode=per_problem --nr_problems=2
+python main.py --path=sample_homeworks/without_assertions --mode=per_problem --nr_problems=2
 ```
 
 5. After going over all problems and grading them, 
@@ -32,6 +32,12 @@ comments that were provided by the user.
 7. If you want to ignore a problem (leave it ungraded), you can type ``ignore``.
 
 ## Homework Format
+
+There are two major types of homeworks that can be graded using this tool:
+
+### Homeworks Without Tests (Assertions)
+In this case each problem is graded by looking at the problem description, code,
+ code execution results and then inserting the grade and comment (feedback).
 
 Currently the code works for jupyter notebook files of the following structure:
 
@@ -50,12 +56,41 @@ Code for the second problem (Code Cell)
 
 ```
 
+### Homeworks With Tests (Assertions)
+
+In case each problem has its own assertions, you can create a separate ``assertions.py`` file
+ and include the assertions in a dictionary, as in this example 
+ [file](https://github.com/NshanPotikyan/HomeworkGrader/blob/master/sample_homeworks/with_assertions/assertions.py).
+To start grading you can run this:
+
+```bash
+python main.py --path=sample_homeworks/with_assertions \
+               --mode=per_problem --nr_problems=5 \
+               --with_assertions=True
+```
+
+* if the code cells in the notebook do not raise any exceptions, then the above code will take care 
+of the whole grading process, including the failed assertions in the student's comments/feedback
+
+* if the code cells in the notebook raise an exception, then the grader will need to grade that problem manually
+as in the case of "*Homeworks Without Tests (Assertions)*" 
+
+## Important notes
+
+* The grader should provide relative grades and the absolute grade will be
+ calculated based on the ``points`` dictionary defined in the 
+ [``configs.py``](https://github.com/NshanPotikyan/HomeworkGrader/blob/master/configs.py)
+
+* If some problems are already graded (there is a **Grade**, **Comment** cell below the code cell), then 
+the program skips grading that problem automatically
+
+
 ## TODO
 
-In future I will try to add the following features:
+In future, I will try to add the following features:
 
-* Check homeworks by running assertion blocks
+-[x] Check homeworks by running assertion blocks automatically (fully unsupervised)
 
-* Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
+-[ ] Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
 
-* Detect potential plagiarism using unsupervised learning techniques, such as clustering.
+-[ ] Detect potential plagiarism using unsupervised learning techniques, such as clustering.
