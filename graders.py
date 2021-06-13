@@ -1,12 +1,15 @@
 import glob
 import os
+
 import utils as ut
 import configs as cf
 
 
 class Grader:
 
-    def __init__(self, path, student_ids, mode='per_student', nr_problems=None):
+    def __init__(self, path, student_ids, mode='per_student',
+                 nr_problems=None, with_assertions=False,
+                 points=None, hidden_assertions=None):
         """
         Constructs the grader object
         :param path: str of the path to the jupyter notebook files
@@ -18,6 +21,9 @@ class Grader:
         self.path = path
         self.student_ids = student_ids
         self.mode = mode
+        self.with_assertions = with_assertions
+        self.points = {} if points is None else points
+        self.hidden_assertions = hidden_assertions
 
         self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
         assert len(self.files) > 0, "No files were found in the specified directory."
@@ -89,11 +95,20 @@ class Grader:
                     # code will be in the next cell
                     code = ut.join(cells[i + 1]['source'])
 
+                    problem_nr = int([nr for nr in cell.strip() if nr.isdigit()][0])
+
+                    if self.with_assertions:
+                        # getting the problem number
+                        code = code + '\n###\n' + self.hidden_assertions[problem_nr]
+
                     grade, comment = self.get_grade_comment(cell, code)
 
                     if grade == 'ignore':
                         # the student's work will be ignored
                         continue
+
+                    # from relative to absolute grade
+                    grade = self._rel2abs_grade(grade, problem_nr=problem_nr)
 
                     notebook = ut.insert_cell(notebook,
                                               position=i + inserted_cells + 2,
@@ -105,7 +120,7 @@ class Grader:
                                               content_type='comment')
 
                     inserted_cells += 2
-                    total_grade += float(grade)
+                    total_grade += grade
                     ut.dict_to_notebook(some_dict=notebook,
                                         file_name=hw)
 
@@ -114,7 +129,7 @@ class Grader:
             if not all_checked or 'Total' not in notebook['cells'][-1]:
                 notebook = ut.insert_cell(notebook,
                                           position=len(notebook['cells']),
-                                          content=str(total_grade),
+                                          content=total_grade,
                                           content_type='total_grade')
                 ut.dict_to_notebook(some_dict=notebook,
                                     file_name=hw)
@@ -169,11 +184,16 @@ class Grader:
 
                 cell = cells[idx]  # problem description
                 code = cells[idx + 1]  # code from the student
+                if self.with_assertions:
+                    code = code + '\n###\n' + self.hidden_assertions[i]
 
                 grade, comment = self.get_grade_comment(cell, code)
 
                 if grade == 'ignore':
                     continue
+
+                # from relative to absolute grade
+                grade = self._rel2abs_grade(grade, problem_nr=i)
 
                 notebook = ut.insert_cell(notebook,
                                           position=idx + 2,
@@ -230,14 +250,45 @@ class Grader:
 
     def get_grade_comment(self, cell, code):
         """
+        Get the grade and the comment/feedback for the given problem,
+        if there is an exception during the code execution, then the problem
+        will be graded manually and
+        if the homework does not contain assertions then again the process will
+        be supervised by the grader
+        :param cell: str of the problem statement
+        :param code: str of the code block
+        :return:
+        """
+        print(cell)
+        if self.with_assertions:
+            try:
+                grade, failed_assertions, assertions = self._get_grade_comment_with_assertions(code)
+                comment = self._conditions2comment(failed_assertions, assertions)
+            except:
+                grade, comment = self._get_grade_comment_without_assertions(code)
+            return grade, comment
+        return self._get_grade_comment_without_assertions(code)
+
+    def _rel2abs_grade(self, grade, problem_nr):
+        """
+        Transforms the relative grade [0, 1] to absolute grade
+        using the defined total points for the given problem
+        :param grade: str or float of the grade
+        :param problem_nr: int of the problem number
+        :return: float of the grade
+        """
+        grade = float(grade)
+        grade *= round(self.points.get(problem_nr, 1), 1)
+        return grade
+
+    def _get_grade_comment_without_assertions(self, code):
+        """
         Primary function for  viewing the problem statement,
         executing the student's code, for assigning a grade
         and adding a comment
-        :param cell: string of the text cell
         :param code: string of the code cell
         :return: tuple of strings
         """
-        print(cell)
         print(code)
         grade = self._check_and_grade(code)
         comment = ''
@@ -251,6 +302,28 @@ class Grader:
                 comment = self._provide_feedback(self._get_input(disp_text))
             break
         return grade, comment
+
+    def _get_grade_comment_with_assertions(self, code):
+        """
+        Check an exercise based on the assertions
+        :param code: string of the code cell
+        :return:
+        """
+
+        only_code, assertion = code.split('\n###\n')
+        if only_code.strip() == '':
+            # in case the excerise is not completed
+            func_name = assertion[:assertion.index('(')].replace('assert ', '')
+            only_code = f"""def {func_name}(*args, **kwargs): return 'Nothing'"""
+
+        # print(assertion)
+        assertion = self._assertions2conditions(assertion)
+        final_code = f"""{only_code}
+test_assertions = [eval(i) for i in {assertion}]
+grade = sum(test_assertions)/len({assertion})
+failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if test == False]"""
+        exec(final_code, globals())
+        return grade, failed_assertions, assertion
 
     def get_ith_problem(self, cells, problem_number):
         """
@@ -271,51 +344,6 @@ class Grader:
             for name, i in self.student_ids.items():
                 f.write(f'{i}  {name}   {self.grade_dict.get(name, 0)}\n')
 
-    @staticmethod
-    def _provide_feedback(comment):
-        """
-        This function is used to decode the comment
-        e.g. add one of the default comments defined in the configs
-        :param comment: str
-        :return: str
-        """
-        if comment == '':
-            return cf.default_comment
-        comment = comment.replace('[solved]',
-                                  cf.solved)
-        return comment
-
-    @staticmethod
-    def _quitter(text):
-        """
-        This function is used to check if it is the time to terminate the program,
-        that is when the user entered 'quit' or 'stop'
-        :param text: string
-        :return: None
-        """
-        text = text.strip().lower()
-        if text == 'stop' or text == 'quit':
-            quit()
-
-    @staticmethod
-    def _contains_problem_statement(cell):
-        """Checks if the cell contains the problem description
-        :param cell: str for notebook cell
-        :return: bool
-        """
-        cell = cell.strip()
-        return cell[0].isdigit() or cell.startswith('Problem')
-
-    @staticmethod
-    def _contains_ith_problem_statement(cell, i):
-        """Checks if the cell contains the ith problem description
-        :param cell: str for notebook cell
-        :param i: int for the problem index
-        :return: bool
-        """
-        cell = cell.strip()
-        return cell.startswith(f'{i}') or cell.startswith(f'Problem{i}')
-
     def _execute(self, repeat=False):
         """
         Controls the process of the code execution or providing the grade
@@ -323,14 +351,12 @@ class Grader:
                        or we repeat the execution
         :return: input string
         """
-        disp_text = 'Press Enter to {} the code or Enter the grade to proceed: '
+        disp_text = 'Press Enter to {} the code or Enter the grade (relative) to proceed: '
         if not repeat:
             disp_text = disp_text.format('execute')
         else:
             disp_text = disp_text.format('repeat')
 
-        # text = input(disp_text)
-        # self._quitter(text)
         text = self._get_input(disp_text)
 
         if text != '' and text != 'ignore':
@@ -380,3 +406,81 @@ class Grader:
         text = input(disp_text)
         self._quitter(text)
         return text
+
+
+    @staticmethod
+    def _assertions2conditions(assertions):
+        """
+        Transforms the assertions into a list of conditions
+        to be evaluated for grading
+        :param assertions: str of the assertions code cell
+        :return: list of str containing the assertion conditions
+        """
+        assertions = assertions.replace('assert ', '')
+        assertions = assertions.split('\n')
+        assertions = [f'{i}' for i in assertions]
+        return assertions
+
+    @staticmethod
+    def _conditions2comment(failed_assertions, assertions):
+        """
+        Transforms the list of conditions into a comment/feedback
+        :param failed_assertions: list of str containing the assertion conditions
+        :param assertions: list of str for all assertions
+        :return: str of the comment
+        """
+        if len(failed_assertions) == len(assertions):
+            return cf.all_incorrect
+        elif len(failed_assertions) == 0:
+            return cf.default_comment
+        else:
+            return f"""{cf.assertion_comment}
+{failed_assertions}        
+""".replace('[', '').replace(']', '').replace('"', '')
+
+
+    @staticmethod
+    def _provide_feedback(comment):
+        """
+        This function is used to decode the comment
+        e.g. add one of the default comments defined in the configs
+        :param comment: str
+        :return: str
+        """
+        if comment == '':
+            return cf.default_comment
+        comment = comment.replace('[solved]',
+                                  cf.solved)
+        return comment
+
+    @staticmethod
+    def _quitter(text):
+        """
+        This function is used to check if it is the time to terminate the program,
+        that is when the user entered 'quit' or 'stop'
+        :param text: string
+        :return: None
+        """
+        text = text.strip().lower()
+        if text == 'stop' or text == 'quit':
+            quit()
+
+    @staticmethod
+    def _contains_problem_statement(cell):
+        """Checks if the cell contains the problem description
+        :param cell: str for notebook cell
+        :return: bool
+        """
+        cell = cell.strip()
+        return cell[0].isdigit() or cell.startswith('Problem')
+
+    @staticmethod
+    def _contains_ith_problem_statement(cell, i):
+        """Checks if the cell contains the ith problem description
+        :param cell: str for notebook cell
+        :param i: int for the problem index
+        :return: bool
+        """
+        cell = cell.strip()
+        return cell.startswith(f'{i}') or cell.startswith(f'Problem{i}')
+

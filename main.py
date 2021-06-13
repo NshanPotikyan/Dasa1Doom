@@ -12,6 +12,10 @@ parser.add_argument('--mode', default=None,
 parser.add_argument('--nr_problems', type=int, default=None,
                     help="The number of problems to be checked, \
                      if None, then the number of problems will be determined automatically from one of the files.")
+parser.add_argument('--with_assertions', type=bool, default=None,
+                    help="If True, then each problem should have assertion blocks (public and private) and \
+                     the grading will be based on the outcomes of the assertions.")
+
 
 args = parser.parse_args()
 
@@ -31,6 +35,17 @@ if __name__ == "__main__":
     else:
         nr_problems = cf.nr_problems
 
-    grader = Grader(path=path, student_ids=cf.student_ids, mode=mode, nr_problems=nr_problems)
+    if args.with_assertions:
+        import sys
+        sys.path.append(cf.path)
+        from assertions import hidden_assertions
+        with_assertions = args.with_assertions
+    else:
+        with_assertions = cf.with_assertions
+        hidden_assertions = None
+
+    grader = Grader(path=path, student_ids=cf.student_ids, mode=mode,
+                    nr_problems=nr_problems, with_assertions=with_assertions,
+                    points=cf.points, hidden_assertions=hidden_assertions)
     grader.grade()
 
