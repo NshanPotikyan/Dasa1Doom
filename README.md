@@ -89,8 +89,8 @@ the program skips grading that problem automatically
 
 In future, I will try to add the following features:
 
--[x] Check homeworks by running assertion blocks automatically (fully unsupervised)
+- [x] Check homeworks by running assertion blocks automatically (fully unsupervised)
 
--[ ] Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
+- [ ] Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
 
--[ ] Detect potential plagiarism using unsupervised learning techniques, such as clustering.
+- [ ] Detect potential plagiarism using unsupervised learning techniques, such as clustering.
