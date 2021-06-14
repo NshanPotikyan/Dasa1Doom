@@ -23,13 +23,25 @@ python main.py
 python main.py --path=sample_homeworks/without_assertions --mode=per_problem --nr_problems=2
 ```
 
-5. After going over all problems and grading them, 
+5. If you want to save and then reuse inserted comments, you can run the following:
+
+```bash
+python main.py --path=sample_homeworks/without_assertions \
+               --mode=per_problem --nr_problems=2 \
+               --save_comments=True
+```
+
+In this case, you will see suggested comments with their respective ids and in order to choose 
+any of them, just enter the corresponding comment id. 
+
+
+6. After going over all problems and grading them, 
 you will see a .txt file with the aggregated grades and each .ipynb file will contain the grades and 
 comments that were provided by the user.
 
-6. If you want to terminate the grading process, you can type ``stop`` or ``quit`` as an input.
+7. If you want to terminate the grading process, you can type ``stop`` or ``quit`` as an input.
 
-7. If you want to ignore a problem (leave it ungraded), you can type ``ignore``.
+8. If you want to ignore a problem (leave it ungraded), you can type ``ignore``.
 
 ## Homework Format
 
@@ -91,6 +103,6 @@ In future, I will try to add the following features:
 
 - [x] Check homeworks by running assertion blocks automatically (fully unsupervised)
 
-- [ ] Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
+- [x] Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
 
 - [ ] Detect potential plagiarism using unsupervised learning techniques, such as clustering.
