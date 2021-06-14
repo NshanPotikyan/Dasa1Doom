@@ -15,6 +15,8 @@ parser.add_argument('--nr_problems', type=int, default=None,
 parser.add_argument('--with_assertions', type=bool, default=None,
                     help="If True, then each problem should have assertion blocks (public and private) and \
                      the grading will be based on the outcomes of the assertions.")
+parser.add_argument('--save_comments', type=bool, default=None,
+                    help="If True, then there will be comment recommendation based on previous comments.")
 
 
 args = parser.parse_args()
@@ -46,6 +48,7 @@ if __name__ == "__main__":
 
     grader = Grader(path=path, student_ids=cf.student_ids, mode=mode,
                     nr_problems=nr_problems, with_assertions=with_assertions,
-                    points=cf.points, hidden_assertions=hidden_assertions)
+                    points=cf.points, hidden_assertions=hidden_assertions,
+                    save_comments=args.save_comments)
     grader.grade()
 

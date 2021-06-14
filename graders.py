@@ -9,7 +9,7 @@ class Grader:
 
     def __init__(self, path, student_ids, mode='per_student',
                  nr_problems=None, with_assertions=False,
-                 points=None, hidden_assertions=None):
+                 points=None, hidden_assertions=None, save_comments=False):
         """
         Constructs the grader object
         :param path: str of the path to the jupyter notebook files
@@ -24,6 +24,8 @@ class Grader:
         self.with_assertions = with_assertions
         self.points = {} if points is None else points
         self.hidden_assertions = hidden_assertions
+        self.save_comments = save_comments
+        self.comments = None
 
         self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
         assert len(self.files) > 0, "No files were found in the specified directory."
@@ -49,6 +51,9 @@ class Grader:
         Performs the grading per student
         :return:
         """
+
+        if self.save_comments:
+            self.comments = {}
 
         # loop over all problems per person and store the results in the grade_dict
         for hw in self.files:
@@ -80,11 +85,17 @@ class Grader:
                 # if starts with a number:
                 if self._contains_problem_statement(cell):
 
+                    problem_nr = int([nr for nr in cell.strip() if nr.isdigit()][0])
+
                     # check if the problem is already graded
                     try:
                         grade_cell = ut.join(cells[i + 2]['source'])
                         if 'Grade' in grade_cell and 'Total' not in grade_cell:
                             total_grade += float(grade_cell.split(' ')[-1])
+                            if self.save_comments:
+                                comment_cell = ut.join(cells[i + 3]['source'])
+                                self.comments[problem_nr] = self.comments.get(problem_nr, '') + \
+                                                            comment_cell.split('</font> ')[-1] + '\n'
                             continue
                     except IndexError:
                         # handling the case when the last problem is not graded yet
@@ -95,13 +106,11 @@ class Grader:
                     # code will be in the next cell
                     code = ut.join(cells[i + 1]['source'])
 
-                    problem_nr = int([nr for nr in cell.strip() if nr.isdigit()][0])
-
                     if self.with_assertions:
                         # getting the problem number
                         code = code + '\n###\n' + self.hidden_assertions[problem_nr]
 
-                    grade, comment = self.get_grade_comment(cell, code)
+                    grade, comment = self.get_grade_comment(cell, code, problem_nr)
 
                     if grade == 'ignore':
                         # the student's work will be ignored
@@ -118,6 +127,8 @@ class Grader:
                                               position=i + inserted_cells + 3,
                                               content=comment,
                                               content_type='comment')
+                    if self.save_comments:
+                        self.comments[problem_nr] = self.comments.get(problem_nr, '') + comment + '\n'
 
                     inserted_cells += 2
                     total_grade += grade
@@ -150,11 +161,15 @@ class Grader:
         # names of the students
         students = [i for i in student_ids.keys()]
 
+        if self.save_comments:
+            self.comments = {}
+
         for i in range(1, nr_problems + 1):
             for j, student in enumerate(students):  # loop over each student
                 print(f'Problem{i}-{student}')
                 # open and read the hw
                 hw = self.get_student_hw(student)
+
                 if hw is None:
                     # no hw was submitted
                     self.grade_dict[student] = 0
@@ -177,6 +192,9 @@ class Grader:
                     if 'Grade' in grade_cell and 'Total' not in grade_cell:
                         grade = float(grade_cell.split(' ')[-1])
                         self.grade_dict[student] = self.grade_dict.get(student, 0) + grade
+                        if self.save_comments:
+                            comment_cell = cells[idx + 3]
+                            self.comments[i] = self.comments.get(i, '') + comment_cell.split('</font> ')[-1] + '\n'
                         continue
                 except IndexError:
                     # the case when it is the last problem that is not graded yet
@@ -187,7 +205,7 @@ class Grader:
                 if self.with_assertions:
                     code = code + '\n###\n' + self.hidden_assertions[i]
 
-                grade, comment = self.get_grade_comment(cell, code)
+                grade, comment = self.get_grade_comment(cell, code, i)
 
                 if grade == 'ignore':
                     continue
@@ -203,6 +221,9 @@ class Grader:
                                           position=idx + 3,
                                           content=comment,
                                           content_type='comment')
+                if self.save_comments:
+                    self.comments[i] = self.comments.get(i, '') + comment + '\n'
+
                 self.grade_dict[student] = self.grade_dict.get(student, 0) + float(grade)
 
                 ut.dict_to_notebook(some_dict=notebook,
@@ -248,7 +269,7 @@ class Grader:
                 counter += 0
         return counter
 
-    def get_grade_comment(self, cell, code):
+    def get_grade_comment(self, cell, code, problem_nr):
         """
         Get the grade and the comment/feedback for the given problem,
         if there is an exception during the code execution, then the problem
@@ -257,6 +278,7 @@ class Grader:
         be supervised by the grader
         :param cell: str of the problem statement
         :param code: str of the code block
+        :param problem_nr: int of the problem number
         :return:
         """
         print(cell)
@@ -267,7 +289,7 @@ class Grader:
             except:
                 grade, comment = self._get_grade_comment_without_assertions(code)
             return grade, comment
-        return self._get_grade_comment_without_assertions(code)
+        return self._get_grade_comment_without_assertions(code, problem_nr)
 
     def _rel2abs_grade(self, grade, problem_nr):
         """
@@ -281,27 +303,48 @@ class Grader:
         grade *= round(self.points.get(problem_nr, 1), 1)
         return grade
 
-    def _get_grade_comment_without_assertions(self, code):
+    def _get_grade_comment_without_assertions(self, code, problem_nr):
         """
         Primary function for  viewing the problem statement,
         executing the student's code, for assigning a grade
         and adding a comment
         :param code: string of the code cell
+        :param problem_nr: int of the problem number
         :return: tuple of strings
         """
         print(code)
         grade = self._check_and_grade(code)
         comment = ''
 
-        disp_text = 'Enter a comment: '
+        disp_text = self._enter_comment(problem_nr)
+
         while True and grade != 'ignore':
             try:
-                comment = self._provide_feedback(self._get_input(disp_text))
+                comment = self._provide_feedback(disp_text)
             except UnicodeDecodeError:
                 # happens sometimes when commenting in Armenian
-                comment = self._provide_feedback(self._get_input(disp_text))
+                comment = self._provide_feedback(disp_text)
             break
         return grade, comment
+
+    def _enter_comment(self, problem_nr):
+        """
+        Constructs the string for the comment input display
+        :param problem_nr: int of the problem number
+        :return: str of the display text
+        """
+        disp_text = 'Enter a comment: \n'
+
+        if self.save_comments:
+            disp_text += 'It can be one of these: \n'
+            comments = self.comments[problem_nr]
+            unique_comments = set(comments.split('\n'))
+            i = 0
+            for comment in unique_comments:
+                if comment:
+                    disp_text += f'{i+1}) {comment}\n'
+                    i += 1
+        return disp_text
 
     def _get_grade_comment_with_assertions(self, code):
         """
@@ -407,6 +450,29 @@ failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if
         self._quitter(text)
         return text
 
+    def _provide_feedback(self, disp_text):
+        """
+        This function is used to decode the comment
+        e.g. add one of the default comments defined in the configs
+        or select one of the previously entered comments
+        :param disp_text: str
+        :return: str
+        """
+
+        comment = self._get_input(disp_text)
+
+        if comment == '':
+            return cf.default_comment
+
+        comment = comment.replace('[solved]',
+                                  cf.solved)
+
+        if self.save_comments:
+            if comment.isdigit():
+                for com in disp_text.split('\n'):
+                    if com.startswith(comment):
+                        comment = com.split(') ')[-1]
+        return comment
 
     @staticmethod
     def _assertions2conditions(assertions):
@@ -438,21 +504,6 @@ failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if
 {failed_assertions}        
 """.replace('[', '').replace(']', '').replace('"', '')
 
-
-    @staticmethod
-    def _provide_feedback(comment):
-        """
-        This function is used to decode the comment
-        e.g. add one of the default comments defined in the configs
-        :param comment: str
-        :return: str
-        """
-        if comment == '':
-            return cf.default_comment
-        comment = comment.replace('[solved]',
-                                  cf.solved)
-        return comment
-
     @staticmethod
     def _quitter(text):
         """
@@ -483,4 +534,3 @@ failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if
         """
         cell = cell.strip()
         return cell.startswith(f'{i}') or cell.startswith(f'Problem{i}')
-
