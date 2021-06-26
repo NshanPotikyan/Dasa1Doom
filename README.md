@@ -39,22 +39,35 @@ related to plagiarism inside the ``configs.py`` and/or run the following script:
 
 ```bash
 python main.py --path=sample_homeworks/without_assertions \
-               --mode=per_problem --nr_problems=2 \
-               --save_comments=True --detect_plagiarism=True \
-               --plagiarism_tol_level=0.9
+               --mode=per_problem --save_comments=True \
+               --detect_plagiarism=True --plagiarism_tol_level=0.9
 ```
 
 In this case you will need to double check the code of those students that 
 had similar (above 90% similarity) solutions and decide whether you want to penalize 
 for plagiarism or not.
 
-7. After going over all problems and grading them, 
+7. Additionally, you can generate dendrogram plots to detect potential clusters of
+cheating students by adding the ``--save_dendrograms=True`` flag:
+
+```bash
+python main.py --path=sample_homeworks/without_assertions \
+               --mode=per_problem --save_comments=True \
+               --detect_plagiarism=True --plagiarism_tol_level=0.9 \
+               --save_dendrograms=True
+```
+
+You will notice problem-level, as well as aggregated (averaged over all problems)
+dendrogram images in your current directory.
+
+
+8. After going over all problems and grading them, 
 you will see a .txt file with the aggregated grades and each .ipynb file will contain the grades and 
 comments that were provided by the user.
 
-8. If you want to terminate the grading process, you can type ``stop`` or ``quit`` as an input.
+9. If you want to terminate the grading process, you can type ``stop`` or ``quit`` as an input.
 
-9. If you want to ignore a problem (leave it ungraded), you can type ``ignore``.
+10. If you want to ignore a problem (leave it ungraded), you can type ``ignore``.
 
 
 
@@ -120,6 +133,8 @@ In future, I will try to add the following features:
 
 - [x] Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
 
-- [x] Detect potential plagiarism using [pycode_similar](https://github.com/fyrestone/pycode_similar).
+- [x] Detect potential plagiarism using [pycode_similar](https://github.com/fyrestone/pycode_similar)
 
-- [ ] Generate a dendrogram of students and detect potential clusters of cheating students
+- [x] Generate a dendrogram of students to detect potential clusters of cheating students
+
+- [ ] Create a minimal GUI 
