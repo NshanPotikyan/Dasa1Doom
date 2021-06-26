@@ -9,7 +9,8 @@ class Grader:
 
     def __init__(self, path, student_ids, mode='per_student',
                  nr_problems=None, with_assertions=False,
-                 points=None, hidden_assertions=None, save_comments=False):
+                 points=None, hidden_assertions=None, save_comments=False,
+                 detect_plagiarism=False, plagiarism_tol_level=0.9):
         """
         Constructs the grader object
         :param path: str of the path to the jupyter notebook files
@@ -17,6 +18,12 @@ class Grader:
         :param mode: str of the checking mode ('per_student' or 'per_problem')
         :param nr_problems: int of the number of problems to be checked,
                             if None then it will be determined from one of the homework files
+        :param with_assertions: bool specifying whether the problems contain assertions or not
+        :param points: dict of absolute scores of each problem
+        :param hidden_assertions: dict of the assertions
+        :param save_comments: bool specifying whether you want to use comment suggestions or not
+        :param detect_plagiarism: bool specifying whether you want to detect potential plagiarism or not
+        :param plagiarism_tol_level: float between 0 and 1 for the plagiarism tolerance level
         """
         self.path = path
         self.student_ids = student_ids
@@ -26,6 +33,9 @@ class Grader:
         self.hidden_assertions = hidden_assertions
         self.save_comments = save_comments
         self.comments = None
+        self.detect_plagiarism = detect_plagiarism
+        self.plagiarism_tol_level = plagiarism_tol_level
+        self.students = [i for i in student_ids.keys()]
 
         self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
         assert len(self.files) > 0, "No files were found in the specified directory."
@@ -41,6 +51,9 @@ class Grader:
         Starts the grading process according to the grading mode (per problem or per student)
         :return:
         """
+        if self.detect_plagiarism:
+            self.search_plagiarism_and_penalize()
+
         if self.mode == 'per_student':
             return self.grade_per_student()
         elif self.mode == 'per_problem':
@@ -151,40 +164,24 @@ class Grader:
         Performs the grading per problem
         :return:
         """
-        student_ids = self.student_ids
-
         # number of problems in the notebook
         nr_problems = self.nr_problems
-
-        # loop over the same problem over all students
-
-        # names of the students
-        students = [i for i in student_ids.keys()]
 
         if self.save_comments:
             self.comments = {}
 
+        # loop over the same problem over all students
+
         for i in range(1, nr_problems + 1):
-            for j, student in enumerate(students):  # loop over each student
+
+            for j, student in enumerate(self.students):  # loop over each student
                 print(f'Problem{i}-{student}')
-                # open and read the hw
-                hw = self.get_student_hw(student)
+                hw, notebook, cells, idx = self.find_problem_per_student(student, problem_id=i)
 
                 if hw is None:
                     # no hw was submitted
                     self.grade_dict[student] = 0
                     continue
-
-                notebook = ut.notebook_to_dict(hw)
-
-                cells = notebook['cells'].copy()
-                nr_cells = len(cells)
-
-                # get all the cells in str format
-                cells = [ut.join(cells[idx]['source']) for idx in range(nr_cells)]
-
-                # get the index of the cell containing the i-th problem
-                idx = self.get_ith_problem(cells=cells, problem_number=i)
 
                 # check if the problem is already checked
                 try:
@@ -228,7 +225,92 @@ class Grader:
 
                 ut.dict_to_notebook(some_dict=notebook,
                                     file_name=hw)
+
         self.grades_to_txt()
+
+    def find_problem_per_student(self, student, problem_id):
+        """
+        Opens the notebook file for the given student
+        :param student: str of student name
+        :param problem_id: int of the problem number
+        :return:
+        hw - file name
+        notebook - dict of the notebook read from json
+        cells - list of str containing the necessary parts of the notebook
+        idx - int of the index of the problem code in the notebook
+        """
+        hw = self.get_student_hw(student)
+
+        if hw is None:
+            return [None]*4
+
+        notebook = ut.notebook_to_dict(hw)
+
+        cells = notebook['cells'].copy()
+        nr_cells = len(cells)
+
+        # get all the cells in str format
+        cells = [ut.join(cells[idx]['source']) for idx in range(nr_cells)]
+
+        # get the index of the cell containing the i-th problem
+        try:
+            idx = self.get_ith_problem(cells=cells, problem_number=problem_id)
+        except IndexError:
+            raise Exception(f'Problem {problem_id} was not found.\
+             Make sure the total number of problems was set correctly.')
+        return hw, notebook, cells, idx
+
+    def search_plagiarism_and_penalize(self):
+        """
+        Goes over all the problems for each student
+        searches for potential plagiarism, asks the user to double check the detection
+        and penalizes if needed
+        :return:
+        """
+        for i in range(1, self.nr_problems + 1):
+            codes = []
+            names = []
+            ids = []
+
+            for j, student in enumerate(self.students):
+                _, _, cells, idx = self.find_problem_per_student(student, problem_id=i)
+
+                if idx is None:
+                    continue
+
+                codes.append(cells[idx + 1])
+                names.append(student)
+                ids.append(idx)
+
+            cheaters = ut.detect_summarize(codes, names, tolerance_level=self.plagiarism_tol_level)
+            for students in cheaters:
+                self.penalize(students, problem_id=i)
+
+    def penalize(self, student_names, problem_id):
+        """
+        Set the grade and comment of those students who have cheated
+        :param student_names: list of strings for student names
+        :param problem_id: int of the problem number
+        :return:
+        """
+        for student_name in student_names:
+            hw = self.get_student_hw(student_name)
+            notebook = ut.notebook_to_dict(hw)
+            cells = notebook['cells'].copy()
+            nr_cells = len(cells)
+            cells = [ut.join(cells[idx]['source']) for idx in range(nr_cells)]
+            idx = self.get_ith_problem(cells=cells, problem_number=problem_id)
+            notebook = ut.insert_cell(notebook,
+                                      position=idx + 2,
+                                      content=0,
+                                      content_type='grade')
+            notebook = ut.insert_cell(notebook,
+                                      position=idx + 3,
+                                      content=cf.plagiarism_comment,
+                                      content_type='comment')
+
+            ut.dict_to_notebook(some_dict=notebook,
+                                file_name=hw)
 
     def get_student_hw(self, student_name, letter_tolerance=2):
         """

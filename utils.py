@@ -1,4 +1,5 @@
 import json
+from code_similarity import detect, summarize
 
 
 def join(text):
@@ -86,3 +87,27 @@ def hamming_dist(str1, str2):
     for i in range(len(str1)):
         dist += (str2[i] != str1[i]) * 1
     return dist
+
+
+def detect_summarize(pycode_list, names, tolerance_level=0.9):
+    """
+    Goes over all code strings and looks for potential plagiarism
+    :param pycode_list: list of str containing python code
+    :param names: list of str containing student names
+    :param tolerance_level: float of the plagiarism tolerance level
+    :return:
+    """
+    cheaters = []
+    for i in range(len(pycode_list)):
+        results = detect(pycode_list[i:], keep_prints=True, module_level=True)
+        for index, func_ast_diff_list in results:
+            sum_plagiarism_percent, _, _ = summarize(func_ast_diff_list)
+            if sum_plagiarism_percent > tolerance_level:
+                print('{:.2f} % of {} code structure is similar with {} code structure.'.format(
+                    sum_plagiarism_percent * 100, names[i], names[index + i]))
+                print(names[i], pycode_list[i], sep='\n****\n')
+                print(names[i+index], pycode_list[i+index], sep='\n****\n')
+                penalize = input('Do you want to penalize for plagiarism? Yes(1) or No(2)')
+                if penalize:
+                    cheaters.append([names[i], names[i+index]])
+    return cheaters

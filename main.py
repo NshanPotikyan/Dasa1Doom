@@ -17,6 +17,10 @@ parser.add_argument('--with_assertions', type=bool, default=None,
                      the grading will be based on the outcomes of the assertions.")
 parser.add_argument('--save_comments', type=bool, default=None,
                     help="If True, then there will be comment recommendation based on previous comments.")
+parser.add_argument('--detect_plagiarism', type=bool, default=None,
+                    help="If True, then the codes will be analyzed for potential plagiarism.")
+parser.add_argument('--plagiarism_tol_level', type=float, default=None,
+                    help="Float between 0 and 1 for the plagiarism tolerance level.")
 
 
 args = parser.parse_args()
@@ -46,9 +50,20 @@ if __name__ == "__main__":
         with_assertions = cf.with_assertions
         hidden_assertions = None
 
+    if args.detect_plagiarism:
+        detect_plagiarism = args.detect_plagiarism
+    else:
+        detect_plagiarism = cf.detect_plagiarism
+
+    if args.plagiarism_tol_level:
+        plagiarism_tol_level = args.plagiarism_tol_level
+    else:
+        plagiarism_tol_level = cf.plagiarism_tol_level
+
     grader = Grader(path=path, student_ids=cf.student_ids, mode=mode,
                     nr_problems=nr_problems, with_assertions=with_assertions,
                     points=cf.points, hidden_assertions=hidden_assertions,
-                    save_comments=args.save_comments)
+                    save_comments=args.save_comments, detect_plagiarism=detect_plagiarism,
+                    plagiarism_tol_level=plagiarism_tol_level)
     grader.grade()
 
