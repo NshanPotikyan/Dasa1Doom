@@ -34,14 +34,29 @@ python main.py --path=sample_homeworks/without_assertions \
 In this case, you will see suggested comments with their respective ids and in order to choose 
 any of them, just enter the corresponding comment id. 
 
+6. If you want to **detect plagiarism** and penalize for it you can set the configs 
+related to plagiarism inside the ``configs.py`` and/or run the following script:
 
-6. After going over all problems and grading them, 
+```bash
+python main.py --path=sample_homeworks/without_assertions \
+               --mode=per_problem --nr_problems=2 \
+               --save_comments=True --detect_plagiarism=True \
+               --plagiarism_tol_level=0.9
+```
+
+In this case you will need to double check the code of those students that 
+had similar (above 90% similarity) solutions and decide whether you want to penalize 
+for plagiarism or not.
+
+7. After going over all problems and grading them, 
 you will see a .txt file with the aggregated grades and each .ipynb file will contain the grades and 
 comments that were provided by the user.
 
-7. If you want to terminate the grading process, you can type ``stop`` or ``quit`` as an input.
+8. If you want to terminate the grading process, you can type ``stop`` or ``quit`` as an input.
 
-8. If you want to ignore a problem (leave it ungraded), you can type ``ignore``.
+9. If you want to ignore a problem (leave it ungraded), you can type ``ignore``.
+
+
 
 ## Homework Format
 
@@ -105,4 +120,6 @@ In future, I will try to add the following features:
 
 - [x] Dynamically save comments (feedbacks) and enable fast insertion of frequent comments
 
-- [ ] Detect potential plagiarism using unsupervised learning techniques, such as clustering.
+- [x] Detect potential plagiarism using [pycode_similar](https://github.com/fyrestone/pycode_similar).
+
+- [ ] Generate a dendrogram of students and detect potential clusters of cheating students
