@@ -1,4 +1,10 @@
+import numpy as np
 import json
+import matplotlib.pyplot as plt
+
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.spatial.distance import squareform
+
 from code_similarity import detect, summarize
 
 
@@ -97,11 +103,14 @@ def detect_summarize(pycode_list, names, tolerance_level=0.9):
     :param tolerance_level: float of the plagiarism tolerance level
     :return:
     """
+    nr_codes = len(pycode_list)
+    similarity_matrix = np.ones((nr_codes, nr_codes))
     cheaters = []
-    for i in range(len(pycode_list)):
+    for i in range(nr_codes):
         results = detect(pycode_list[i:], keep_prints=True, module_level=True)
         for index, func_ast_diff_list in results:
             sum_plagiarism_percent, _, _ = summarize(func_ast_diff_list)
+            similarity_matrix[i, index+i] = round(sum_plagiarism_percent, 2)
             if sum_plagiarism_percent > tolerance_level:
                 print('{:.2f} % of {} code structure is similar with {} code structure.'.format(
                     sum_plagiarism_percent * 100, names[i], names[index + i]))
@@ -110,4 +119,30 @@ def detect_summarize(pycode_list, names, tolerance_level=0.9):
                 penalize = input('Do you want to penalize for plagiarism? Yes(1) or No(2)')
                 if penalize:
                     cheaters.append([names[i], names[i+index]])
-    return cheaters
+
+    # make the similarity matrix symmetric
+    i_lower = np.tril_indices(nr_codes, -1)
+    similarity_matrix[i_lower] = similarity_matrix.T[i_lower]
+    return cheaters, similarity_matrix
+
+
+def plot_dendrogram(matrix, labels=None, title='', color_threshold=0.3, linkage_type='single'):
+    """
+    Plot the dendrogram of the clustering
+    :param matrix: numpy array of similarity matrix
+    :param labels: list of str for leaf names
+    :param title: str of the plot title
+    :param color_threshold: float for coloring the tree linkages as clusters, below the specified value
+    :param linkage_type: str type of linkage to apply (see sklearn documentation for more info)
+    :return:
+    """
+    if labels is None:
+        labels = [f'{i}' for i in np.arange(len(matrix))]
+    dists = squareform(matrix)
+    linkage_matrix = linkage(dists, linkage_type)
+    plt.figure(figsize=(15, 10))
+    dendrogram(linkage_matrix, color_threshold=color_threshold,
+               labels=labels, show_contracted=True, leaf_rotation=30)
+    plt.ylabel('Dissimilarity')
+    plt.title(f'{title}')
+    plt.savefig(f'{title}.jpg')

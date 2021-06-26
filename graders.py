@@ -1,5 +1,6 @@
 import glob
 import os
+import numpy as np
 
 import utils as ut
 import configs as cf
@@ -10,7 +11,7 @@ class Grader:
     def __init__(self, path, student_ids, mode='per_student',
                  nr_problems=None, with_assertions=False,
                  points=None, hidden_assertions=None, save_comments=False,
-                 detect_plagiarism=False, plagiarism_tol_level=0.9):
+                 detect_plagiarism=False, plagiarism_tol_level=0.9, save_dendrograms=False):
         """
         Constructs the grader object
         :param path: str of the path to the jupyter notebook files
@@ -24,6 +25,7 @@ class Grader:
         :param save_comments: bool specifying whether you want to use comment suggestions or not
         :param detect_plagiarism: bool specifying whether you want to detect potential plagiarism or not
         :param plagiarism_tol_level: float between 0 and 1 for the plagiarism tolerance level
+        :param save_dendrograms: bool specifying whether to save dendrogram plots or not
         """
         self.path = path
         self.student_ids = student_ids
@@ -36,6 +38,7 @@ class Grader:
         self.detect_plagiarism = detect_plagiarism
         self.plagiarism_tol_level = plagiarism_tol_level
         self.students = [i for i in student_ids.keys()]
+        self.save_dendrograms = save_dendrograms
 
         self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
         assert len(self.files) > 0, "No files were found in the specified directory."
@@ -267,10 +270,10 @@ class Grader:
         and penalizes if needed
         :return:
         """
+        similarity_tensor = []
         for i in range(1, self.nr_problems + 1):
             codes = []
             names = []
-            ids = []
 
             for j, student in enumerate(self.students):
                 _, _, cells, idx = self.find_problem_per_student(student, problem_id=i)
@@ -280,11 +283,23 @@ class Grader:
 
                 codes.append(cells[idx + 1])
                 names.append(student)
-                ids.append(idx)
 
-            cheaters = ut.detect_summarize(codes, names, tolerance_level=self.plagiarism_tol_level)
+            cheaters, similarity_matrix = ut.detect_summarize(codes, names,
+                                                              tolerance_level=self.plagiarism_tol_level)
+            diss_matrix = 1 - similarity_matrix
+
+            if self.save_dendrograms:
+                ut.plot_dendrogram(matrix=diss_matrix, labels=names, title=f'Problem {i}')
+
+            similarity_tensor.append(diss_matrix)
+
             for students in cheaters:
                 self.penalize(students, problem_id=i)
+
+        if self.save_dendrograms:
+            similarity_tensor = np.array(similarity_tensor)
+            mean_similarity = similarity_tensor.mean(axis=0)
+            ut.plot_dendrogram(mean_similarity, labels=names, title='Over All Problems')
 
     def penalize(self, student_names, problem_id):
         """
@@ -294,12 +309,9 @@ class Grader:
         :return:
         """
         for student_name in student_names:
-            hw = self.get_student_hw(student_name)
-            notebook = ut.notebook_to_dict(hw)
-            cells = notebook['cells'].copy()
-            nr_cells = len(cells)
-            cells = [ut.join(cells[idx]['source']) for idx in range(nr_cells)]
-            idx = self.get_ith_problem(cells=cells, problem_number=problem_id)
+            hw, notebook, cells, idx = self.find_problem_per_student(student_name,
+                                                                     problem_id=problem_id)
+
             notebook = ut.insert_cell(notebook,
                                       position=idx + 2,
                                       content=0,
