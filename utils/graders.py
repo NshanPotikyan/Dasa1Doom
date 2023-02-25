@@ -1,7 +1,6 @@
 import glob
 import os
 import numpy as np
-import streamlit as st
 
 import utils.misc as ut
 import configs as cf
@@ -244,7 +243,7 @@ class Grader:
                 cell = cells[idx]  # problem description
                 code = cells[idx + 1]  # code from the student
                 if self.with_assertions:
-                    code = code + '\n###\n' + self.hidden_assertions[i]
+                    code = code + '\n###\n' + cells[idx+2]
 
                 grade, comment = self.get_grade_comment(cell, code, i)
 
@@ -255,11 +254,11 @@ class Grader:
                 grade = self._rel2abs_grade(grade, problem_nr=i)
 
                 notebook = ut.insert_cell(notebook,
-                                          position=idx + 2,
+                                          position=idx + 2 + self.with_assertions,
                                           content=grade,
                                           content_type='grade')
                 notebook = ut.insert_cell(notebook,
-                                          position=idx + 3,
+                                          position=idx + 3 + self.with_assertions,
                                           content=comment,
                                           content_type='comment')
                 if self.save_comments:
@@ -401,7 +400,7 @@ class Grader:
         for i in range(nr_cells):
             cell = ut.join(cells[i]['source'])
             if self._contains_problem_statement(cell):
-                counter += 0
+                counter += 1
         return counter
 
     def get_grade_comment(self, cell, code, problem_nr):
@@ -421,7 +420,8 @@ class Grader:
             try:
                 grade, comment = self.code_parser(problem_id=problem_nr,
                                                   code_cell=code)
-            except:
+            except Exception as e:
+                print(e)
                 grade, comment = self._get_grade_comment_without_assertions(code, problem_nr)
             return grade, comment
         return self._get_grade_comment_without_assertions(code, problem_nr)
@@ -480,33 +480,6 @@ class Grader:
                     disp_text += f'{i + 1}) {comment}\n'
                     i += 1
         return disp_text
-
-    #     def _get_grade_comment_with_assertions(self, code, problem_id):
-    #         """
-    #         Check an exercise based on the assertions
-    #
-    #         :param code: string of the code cell + assertions + hidden_assertions (optionally)
-    #             separated by '\\n###\\n'
-    #         :return:
-    #         """
-    #
-    #         grade, failed_assertions, assertion = self.code_parser(problem_id=problem_id, code_cell=code)
-    #
-    #         only_code, assertion = code.split('\n###\n')
-    #
-    #         if only_code.strip() == '':
-    #             # in case the excerise is not completed e.g. code cell is empty
-    #             func_name = assertion[:assertion.index('(')].replace('assert ', '')
-    #             only_code = f"""def {func_name}(*args, **kwargs): return 'Nothing'"""
-    #
-    #         # print(assertion)
-    #         assertion = self._assertions2conditions(assertion)
-    #         final_code = f"""{only_code}
-    # test_assertions = [eval(i) for i in {assertion}]
-    # grade = sum(test_assertions)/len({assertion})
-    # failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if test == False]"""
-    #         exec(final_code, globals())
-    #         return grade, failed_assertions, assertion
 
     def get_ith_problem(self, cells, problem_number):
         """
@@ -620,42 +593,14 @@ class Grader:
 
     def show(self, *args, **kwargs):
         if self.streamlit:
+            import streamlit as st
+
             if kwargs.get('code', False):
                 st.code(*args)
             else:
                 st.write(*args)
         else:
             print(*args)
-
-    @staticmethod
-    def _assertions2conditions(assertions):
-        """
-        Transforms the assertions into a list of conditions
-        to be evaluated for grading
-        :param assertions: str of the assertions code cell
-        :return: list of str containing the assertion conditions
-        """
-        assertions = assertions.replace('assert ', '')
-        assertions = assertions.split('\n')
-        assertions = [f'{i}' for i in assertions]
-        return assertions
-
-    @staticmethod
-    def _conditions2comment(failed_assertions, assertions):
-        """
-        Transforms the list of conditions into a comment/feedback
-        :param failed_assertions: list of str containing the assertion conditions
-        :param assertions: list of str for all assertions
-        :return: str of the comment
-        """
-        if len(failed_assertions) == len(assertions):
-            return cf.all_incorrect
-        elif len(failed_assertions) == 0:
-            return cf.default_comment
-        else:
-            return f"""{cf.assertion_comment}
-{failed_assertions}        
-""".replace('[', '').replace(']', '').replace('"', '')
 
     @staticmethod
     def _quitter(text):
@@ -676,8 +621,9 @@ class Grader:
         :param cell: str for notebook cell
         :return: bool
         """
-        cell = cell.strip()
-        return cell[0].isdigit() or cell.startswith(cf.problem_starts_with)
+        if cell:
+            return cell[0].isdigit() or cell.strip().startswith(cf.problem_starts_with)
+        return False
 
     @staticmethod
     def _contains_ith_problem_statement(cell, i):

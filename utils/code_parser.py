@@ -14,13 +14,13 @@ class CodeParser:
 
         assertions += f'\n{self.hidden_assertions.get(problem_id, "")}'
 
-        if only_code.strip() == '':
-            # in case the excerise is not completed e.g. code cell is empty
-            func_name = assertions[:assertions.index('(')].replace('assert ', '')
-            only_code = f"""def {func_name}(*args, **kwargs): return 'Nothing'"""
+        if 'return' not in only_code:
+            # in case the excerise is not completed e.g.
+            # the function has no return statement
+            func_name = only_code[:only_code.index('(')].replace('def ', '')
+            only_code = f"""def {func_name}(*args, **kwargs): return -666"""
 
-        # TODO: take this to the config file
-        only_code = f'import numpy as np\n{only_code}'
+        only_code = f'{cf.dependencies}\n{only_code}'
 
         self._process_assertions(assertions)
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"

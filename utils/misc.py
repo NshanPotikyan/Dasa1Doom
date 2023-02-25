@@ -1,7 +1,6 @@
 import numpy as np
 import json
 import matplotlib.pyplot as plt
-import streamlit as st
 
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
@@ -28,6 +27,8 @@ def append_tab(some_str):
 
 
 def get_grade(text):
+    import streamlit as st
+
     # with st.sidebar.expander("Add a comment"):
     form = st.form(text)
     grade = form.number_input('Grade', min_value=0, max_value=1)
@@ -147,7 +148,10 @@ def detect_summarize(pycode_list, names, tolerance_level=0.9):
     similarity_matrix = np.ones((nr_codes, nr_codes))
     cheaters = []
     for i in range(nr_codes):
-        results = detect(pycode_list[i:], keep_prints=True, module_level=True)
+        try:
+            results = detect(pycode_list[i:], keep_prints=True, module_level=True)
+        except SyntaxError:
+            continue
         for index, func_ast_diff_list in results:
             sum_plagiarism_percent, _, _ = summarize(func_ast_diff_list)
             similarity_matrix[i, index + i] = round(sum_plagiarism_percent, 2)
