@@ -1,8 +1,9 @@
-# path = "sample_homeworks/without_assertions"
+path = "sample_homeworks/without_assertions"
+problem_starts_with = '**Խնդիր '
 mode = 'per_problem'
 with_assertions = False
-nr_problems = 5
-points = {k: 1 for k in range(1, nr_problems+1)}
+nr_problems = None
+points = 'stars' #{k: 1 for k in range(1, nr_problems+1)}
 detect_plagiarism = False
 plagiarism_tol_level = 0.9
 save_dendrograms = False
@@ -14,10 +15,10 @@ save_dendrograms = False
 # plagiarism_comment = "Plagiarism was detected!"
 
 
-# student_ids = {
-#     'AramAramyan': 1,
-#     'ArmenAshotyan': 2
-# }
+student_ids = {
+    'AramAramyan': 1,
+    'ArmenAshotyan': 2
+}
 
 # in Armenian
 default_comment = 'Շատ լավ'

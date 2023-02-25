@@ -1,17 +1,19 @@
 import glob
 import os
 import numpy as np
+import streamlit as st
 
-import utils as ut
+import utils.misc as ut
 import configs as cf
+from utils.code_parser import CodeParser
 
 
 class Grader:
 
-    def __init__(self, path, student_ids, mode='per_student',
+    def __init__(self, path=None, student_ids=None, mode='per_student',
                  nr_problems=None, with_assertions=False,
                  points=None, hidden_assertions=None, save_comments=False,
-                 detect_plagiarism=False, plagiarism_tol_level=0.9, save_dendrograms=False):
+                 detect_plagiarism=False, plagiarism_tol_level=0.9, save_dendrograms=False, streamlit=False):
         """
         Constructs the grader object
         :param path: str of the path to the jupyter notebook files
@@ -31,7 +33,7 @@ class Grader:
         self.student_ids = student_ids
         self.mode = mode
         self.with_assertions = with_assertions
-        self.points = {} if points is None else points
+        self.code_parser = CodeParser(hidden_assertions=hidden_assertions)
         self.hidden_assertions = hidden_assertions
         self.save_comments = save_comments
         self.comments = None
@@ -39,15 +41,53 @@ class Grader:
         self.plagiarism_tol_level = plagiarism_tol_level
         self.students = [i for i in student_ids.keys()]
         self.save_dendrograms = save_dendrograms
+        self.streamlit = streamlit
 
-        self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
+        if isinstance(path, str):
+            self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
+        else:
+            # in case of uploaded files (streamlit)
+            self.files = path
+
         assert len(self.files) > 0, "No files were found in the specified directory."
         self.nr_problems = nr_problems
 
         if mode == 'per_problem':
             if self.nr_problems is None:
                 self.nr_problems = self.get_nr_problems()
+
+        self.points = self._get_points_dict(points)
+
         self.grade_dict = {}
+
+    def _get_points_dict(self, points):
+        """
+        Creates a dictionary for absolute points of each assignment.
+
+        :param str or None or dict points: in case points='stars', then the point for each assignment will
+            be determined given the amount of stars,
+            in case points=None, then the points will be entered by
+            the grader during the grading, in case a dict is provided, then that will be the absolute points
+        :returns:
+        :rtype: dict
+        """
+        if points == 'stars':
+            # take one hw file
+            notebook = ut.notebook_to_dict(file_name=self.files[0])
+            cells = notebook['cells']
+            nr_cells = len(cells)
+            points_dict = {}
+            problem_number = 1
+            for i in range(nr_cells):
+                cell = ut.join(cells[i]['source'])
+                if self._contains_ith_problem_statement(cell, i=problem_number):
+                    points_dict[problem_number] = cell.count('⭐')
+                    problem_number += 1
+                if problem_number == self.nr_problems:
+                    break
+            points_dict = ut.normalize_dict(points_dict)
+            return points_dict
+        return {} if points is None else points
 
     def grade(self):
         """
@@ -74,11 +114,11 @@ class Grader:
         # loop over all problems per person and store the results in the grade_dict
         for hw in self.files:
             # get student name from the file name (e.g. HW1_Loops_PoghosPoghosyan.ipynb)
-            name = hw.split('_')[-1][:-6]
+            name = ut.get_student_name(file_name=hw)
 
             assert name in self.student_ids, f"{name} student is not found"
 
-            print(f'Processing {name}s homework')
+            # self.show(f'Processing {name}s homework')
 
             # open and read the notebook file
             notebook = ut.notebook_to_dict(file_name=hw)
@@ -90,6 +130,7 @@ class Grader:
             inserted_cells = 0
             total_grade = 0
             all_checked = True
+            problem_nr = 0
 
             for i in range(nr_cells):
                 cell = ut.join(cells[i]['source'])
@@ -101,15 +142,15 @@ class Grader:
                 # if starts with a number:
                 if self._contains_problem_statement(cell):
 
-                    problem_nr = int([nr for nr in cell.strip() if nr.isdigit()][0])
-
+                    # problem_nr = int(''.join([nr for nr in cell.strip() if nr.isdigit()]))
+                    problem_nr += 1
                     # check if the problem is already graded
                     try:
-                        grade_cell = ut.join(cells[i + 2]['source'])
+                        grade_cell = ut.join(cells[i + 2 + self.with_assertions]['source'])
                         if 'Grade' in grade_cell and 'Total' not in grade_cell:
                             total_grade += float(grade_cell.split(' ')[-1])
                             if self.save_comments:
-                                comment_cell = ut.join(cells[i + 3]['source'])
+                                comment_cell = ut.join(cells[i + 3 + self.with_assertions]['source'])
                                 self.comments[problem_nr] = self.comments.get(problem_nr, '') + \
                                                             comment_cell.split('</font> ')[-1] + '\n'
                             continue
@@ -124,7 +165,7 @@ class Grader:
 
                     if self.with_assertions:
                         # getting the problem number
-                        code = code + '\n###\n' + self.hidden_assertions[problem_nr]
+                        code = code + '\n###\n' + ut.join(cells[i + 2]['source'])
 
                     grade, comment = self.get_grade_comment(cell, code, problem_nr)
 
@@ -136,11 +177,11 @@ class Grader:
                     grade = self._rel2abs_grade(grade, problem_nr=problem_nr)
 
                     notebook = ut.insert_cell(notebook,
-                                              position=i + inserted_cells + 2,
+                                              position=i + inserted_cells + 2 + self.with_assertions,
                                               content=grade,
                                               content_type='grade')
                     notebook = ut.insert_cell(notebook,
-                                              position=i + inserted_cells + 3,
+                                              position=i + inserted_cells + 3 + self.with_assertions,
                                               content=comment,
                                               content_type='comment')
                     if self.save_comments:
@@ -150,7 +191,7 @@ class Grader:
                     total_grade += grade
                     ut.dict_to_notebook(some_dict=notebook,
                                         file_name=hw)
-
+            total_grade = round(total_grade)
             self.grade_dict[name] = total_grade
 
             if not all_checked or 'Total' not in notebook['cells'][-1]:
@@ -245,7 +286,7 @@ class Grader:
         hw = self.get_student_hw(student)
 
         if hw is None:
-            return [None]*4
+            return [None] * 4
 
         notebook = ut.notebook_to_dict(hw)
 
@@ -375,13 +416,13 @@ class Grader:
         :param problem_nr: int of the problem number
         :return:
         """
-        print(cell)
+        # self.show(cell)
         if self.with_assertions:
             try:
-                grade, failed_assertions, assertions = self._get_grade_comment_with_assertions(code)
-                comment = self._conditions2comment(failed_assertions, assertions)
+                grade, comment = self.code_parser(problem_id=problem_nr,
+                                                  code_cell=code)
             except:
-                grade, comment = self._get_grade_comment_without_assertions(code)
+                grade, comment = self._get_grade_comment_without_assertions(code, problem_nr)
             return grade, comment
         return self._get_grade_comment_without_assertions(code, problem_nr)
 
@@ -406,7 +447,7 @@ class Grader:
         :param problem_nr: int of the problem number
         :return: tuple of strings
         """
-        print(code)
+        self.show(code, code=True)
         grade = self._check_and_grade(code)
         comment = ''
 
@@ -436,31 +477,36 @@ class Grader:
             i = 0
             for comment in unique_comments:
                 if comment:
-                    disp_text += f'{i+1}) {comment}\n'
+                    disp_text += f'{i + 1}) {comment}\n'
                     i += 1
         return disp_text
 
-    def _get_grade_comment_with_assertions(self, code):
-        """
-        Check an exercise based on the assertions
-        :param code: string of the code cell
-        :return:
-        """
-
-        only_code, assertion = code.split('\n###\n')
-        if only_code.strip() == '':
-            # in case the excerise is not completed
-            func_name = assertion[:assertion.index('(')].replace('assert ', '')
-            only_code = f"""def {func_name}(*args, **kwargs): return 'Nothing'"""
-
-        # print(assertion)
-        assertion = self._assertions2conditions(assertion)
-        final_code = f"""{only_code}
-test_assertions = [eval(i) for i in {assertion}]
-grade = sum(test_assertions)/len({assertion})
-failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if test == False]"""
-        exec(final_code, globals())
-        return grade, failed_assertions, assertion
+    #     def _get_grade_comment_with_assertions(self, code, problem_id):
+    #         """
+    #         Check an exercise based on the assertions
+    #
+    #         :param code: string of the code cell + assertions + hidden_assertions (optionally)
+    #             separated by '\\n###\\n'
+    #         :return:
+    #         """
+    #
+    #         grade, failed_assertions, assertion = self.code_parser(problem_id=problem_id, code_cell=code)
+    #
+    #         only_code, assertion = code.split('\n###\n')
+    #
+    #         if only_code.strip() == '':
+    #             # in case the excerise is not completed e.g. code cell is empty
+    #             func_name = assertion[:assertion.index('(')].replace('assert ', '')
+    #             only_code = f"""def {func_name}(*args, **kwargs): return 'Nothing'"""
+    #
+    #         # print(assertion)
+    #         assertion = self._assertions2conditions(assertion)
+    #         final_code = f"""{only_code}
+    # test_assertions = [eval(i) for i in {assertion}]
+    # grade = sum(test_assertions)/len({assertion})
+    # failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if test == False]"""
+    #         exec(final_code, globals())
+    #         return grade, failed_assertions, assertion
 
     def get_ith_problem(self, cells, problem_number):
         """
@@ -540,8 +586,12 @@ failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if
         :param disp_text:
         :return:
         """
-        text = input(disp_text)
-        self._quitter(text)
+        # TODO: add feature for adding a comment from streamlit
+        if self.streamlit:
+            text = ut.get_grade(disp_text)
+        else:
+            text = input(disp_text)
+            self._quitter(text)
         return text
 
     def _provide_feedback(self, disp_text):
@@ -567,6 +617,15 @@ failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if
                     if com.startswith(comment):
                         comment = com.split(') ')[-1]
         return comment
+
+    def show(self, *args, **kwargs):
+        if self.streamlit:
+            if kwargs.get('code', False):
+                st.code(*args)
+            else:
+                st.write(*args)
+        else:
+            print(*args)
 
     @staticmethod
     def _assertions2conditions(assertions):
@@ -613,18 +672,20 @@ failed_assertions = [{assertion}[i] for i, test in enumerate(test_assertions) if
     @staticmethod
     def _contains_problem_statement(cell):
         """Checks if the cell contains the problem description
+
         :param cell: str for notebook cell
         :return: bool
         """
         cell = cell.strip()
-        return cell[0].isdigit() or cell.startswith('Problem')
+        return cell[0].isdigit() or cell.startswith(cf.problem_starts_with)
 
     @staticmethod
     def _contains_ith_problem_statement(cell, i):
         """Checks if the cell contains the ith problem description
+
         :param cell: str for notebook cell
         :param i: int for the problem index
         :return: bool
         """
         cell = cell.strip()
-        return cell.startswith(f'{i}') or cell.startswith(f'Problem{i}')
+        return cell.startswith(f'{i}') or cell.startswith(f'{cf.problem_starts_with}{i}')

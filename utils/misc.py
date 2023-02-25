@@ -1,11 +1,40 @@
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+import streamlit as st
 
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 
-from code_similarity import detect, summarize
+from utils.code_similarity import detect, summarize
+
+
+def normalize_dict(some_dict, values_sum=100):
+    """
+    Converts the values of a dict, such that the values sum up to the provided scalar (defaults to 100).
+
+    :param dict some_dict: dict with scalar values
+    :param int values_sum: the desired amount that the final dict values should sum up to
+    :returns:
+    :rtype: dict
+    """
+    total_sum = sum(some_dict.values())
+    return {k: round(v / total_sum * values_sum, 2) for k, v in some_dict.items()}
+
+
+def append_tab(some_str):
+    out = '\n\t'.join(some_str.split('\n'))
+    return f'\t{out}\n'
+
+
+def get_grade(text):
+    # with st.sidebar.expander("Add a comment"):
+    form = st.form(text)
+    grade = form.number_input('Grade', min_value=0, max_value=1)
+    # comment = form.text_area("Comment")
+    submit = form.form_submit_button("Add a comment")
+    if submit:
+        return grade
 
 
 def join(text):
@@ -23,8 +52,16 @@ def notebook_to_dict(file_name):
     :param file_name: str of the .ipynb file name
     :return: dict
     """
-    file = open(file_name, mode='r', encoding="utf8")
-    return json.load(file)
+    if isinstance(file_name, str):
+        file_name = open(file_name, mode='r', encoding="utf8")
+    return json.load(file_name)
+
+
+def get_student_name(file_name):
+    if not isinstance(file_name, str):
+        # the case of streamlit
+        file_name = file_name.name
+    return file_name.split('_')[-1][:-6]
 
 
 def dict_to_notebook(some_dict, file_name):
@@ -35,6 +72,9 @@ def dict_to_notebook(some_dict, file_name):
     :param file_name: str of the JN file name
     :return:
     """
+    if not isinstance(file_name, str):
+        # case of streamlit
+        file_name = file_name.name
     with open(file_name, mode='w') as f:
         json.dump(some_dict, f)
 
@@ -110,15 +150,15 @@ def detect_summarize(pycode_list, names, tolerance_level=0.9):
         results = detect(pycode_list[i:], keep_prints=True, module_level=True)
         for index, func_ast_diff_list in results:
             sum_plagiarism_percent, _, _ = summarize(func_ast_diff_list)
-            similarity_matrix[i, index+i] = round(sum_plagiarism_percent, 2)
+            similarity_matrix[i, index + i] = round(sum_plagiarism_percent, 2)
             if sum_plagiarism_percent > tolerance_level:
                 print('{:.2f} % of {} code structure is similar with {} code structure.'.format(
                     sum_plagiarism_percent * 100, names[i], names[index + i]))
                 print(names[i], pycode_list[i], sep='\n****\n')
-                print(names[i+index], pycode_list[i+index], sep='\n****\n')
+                print(names[i + index], pycode_list[i + index], sep='\n****\n')
                 penalize = input('Do you want to penalize for plagiarism? Yes(1) or No(2)')
                 if penalize:
-                    cheaters.append([names[i], names[i+index]])
+                    cheaters.append([names[i], names[i + index]])
 
     # make the similarity matrix symmetric
     i_lower = np.tril_indices(nr_codes, -1)
