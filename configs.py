@@ -9,20 +9,16 @@ plagiarism_tol_level = 0.9
 save_dendrograms = False
 dependencies = "import numpy as np"
 
-# default_comment = 'Good job!'
-# solved = 'We went over the solution of this problem during the class.'
-# all_incorrect = "The program failed on all assertions"
-# assertion_comment = "The code broke on the following assertions:"
-# plagiarism_comment = "Plagiarism was detected!"
-
-
 student_ids = {
     'AramAramyan': 1,
     'ArmenAshotyan': 2,
 }
 
 # in Armenian
-default_comment = ''
+grade_title = 'Գնահատական'
+comment_title = 'Մեկնաբանություն'
+total_grade_title = 'Ընդհանուր գնահատական'
+default_comment = 'Լուծումը ճիշտ է'
 solved = 'Խնդրի լուծման մի օրինակ քննարկել ենք դասի ժամանակ'
 all_incorrect = "Ծրագիրը չի աշխատում ոչ մի assertion֊ի վրա"
 assertion_comment = "Ծրագիրը ճիշտ չի աշխատում հետևյալ assertion-ների վրա․"

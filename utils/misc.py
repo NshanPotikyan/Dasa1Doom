@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 
+import configs as cf
 from utils.code_similarity import detect, summarize
 
 
@@ -105,14 +106,14 @@ def create_new_cell(content, content_type):
     :return:
     """
     if content_type == 'grade':
-        title = "<font color='red'>**Grade:**</font>"
+        title = f"<font color='red'>**{cf.grade_title}:**</font>"
     elif content_type == 'empty':
         title = ""
         content = ""
     elif content_type == 'comment':
-        title = "<font color='red'>**Comment:**</font>"
+        title = f"<font color='red'>**{cf.comment_title}:**</font>"
     elif content_type == 'total_grade':
-        title = "<font color='red'>**Total Grade:**</font>"
+        title = f"<font color='red'>**{cf.total_grade_title}:**</font>"
     else:
         raise Exception(f"""The content_type was not specified correctly.
         Should be one of these 'grade', 'comment', 'total_grade', 'empty', but {content_type}

@@ -49,11 +49,9 @@ class Grader:
             self.files = path
 
         assert len(self.files) > 0, "No files were found in the specified directory."
-        self.nr_problems = nr_problems
 
-        if mode == 'per_problem':
-            if self.nr_problems is None:
-                self.nr_problems = self.get_nr_problems()
+        if nr_problems is None:
+            self.nr_problems = self.get_nr_problems()
 
         self.points = self._get_points_dict(points)
 
@@ -82,7 +80,7 @@ class Grader:
                 if self._contains_ith_problem_statement(cell, i=problem_number):
                     points_dict[problem_number] = cell.count('⭐')
                     problem_number += 1
-                if problem_number == self.nr_problems:
+                if problem_number > self.nr_problems:
                     break
             points_dict = ut.normalize_dict(points_dict)
             return points_dict
@@ -146,7 +144,7 @@ class Grader:
                     # check if the problem is already graded
                     try:
                         grade_cell = ut.join(cells[i + 2 + self.with_assertions]['source'])
-                        if 'Grade' in grade_cell and 'Total' not in grade_cell:
+                        if cf.grade_title in grade_cell and cf.total_grade_title not in grade_cell:
                             total_grade += float(grade_cell.split(' ')[-1])
                             if self.save_comments:
                                 comment_cell = ut.join(cells[i + 3 + self.with_assertions]['source'])
@@ -193,7 +191,7 @@ class Grader:
             total_grade = round(total_grade)
             self.grade_dict[name] = total_grade
 
-            if not all_checked or 'Total' not in notebook['cells'][-1]:
+            if not all_checked or cf.total_grade_title not in notebook['cells'][-1]:
                 notebook = ut.insert_cell(notebook,
                                           position=len(notebook['cells']),
                                           content=total_grade,
@@ -229,7 +227,7 @@ class Grader:
                 # check if the problem is already checked
                 try:
                     grade_cell = cells[idx + 2]
-                    if 'Grade' in grade_cell and 'Total' not in grade_cell:
+                    if cf.grade_title in grade_cell and cf.total_grade_title not in grade_cell:
                         grade = float(grade_cell.split(' ')[-1])
                         self.grade_dict[student] = self.grade_dict.get(student, 0) + grade
                         if self.save_comments:
