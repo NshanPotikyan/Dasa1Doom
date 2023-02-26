@@ -1,6 +1,6 @@
 import argparse
-import configs as cf
-
+from configs import general as cf
+from configs import students as sc
 from utils.graders import Grader
 
 parser = argparse.ArgumentParser(description="Homework checking.")
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         save_dendrograms = cf.save_dendrograms
 
     grader = Grader(path=path,
-                    student_ids=cf.student_ids,
+                    student_ids=sc.student_ids,
                     mode=mode,
                     nr_problems=nr_problems,
                     with_assertions=with_assertions,

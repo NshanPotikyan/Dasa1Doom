@@ -1,4 +1,4 @@
-import configs as cf
+from configs import general as cf
 
 
 class CodeParser:
@@ -10,15 +10,16 @@ class CodeParser:
         self.test_assertions = ''
 
     def __call__(self, problem_id, code_cell):
-        only_code, assertions = code_cell.split('\n###\n')
+        # only_code, assertions = code_cell.split('\n###\n')
+        only_code = code_cell.strip()
 
-        assertions += f'\n{self.hidden_assertions.get(problem_id, "")}'
+        assertions = f'{self.hidden_assertions.get(problem_id, "")}'
 
         if 'return' not in only_code:
             # in case the excerise is not completed e.g.
             # the function has no return statement
-            func_name = only_code[:only_code.index('(')].replace('def ', '')
-            only_code = f"""def {func_name}(*args, **kwargs): return -666"""
+            # func_name = only_code[:only_code.index('(')].replace('def ', '')
+            only_code = ""
 
         only_code = f'{cf.dependencies}\n{only_code}'
 
@@ -27,7 +28,10 @@ class CodeParser:
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"
         final_code = f"{only_code}\n{self.test_assertions}\n{grade_str}\n{failed}"
         # print(final_code)
-        exec(final_code, globals())
+        try:
+            exec(final_code, globals())
+        except Exception as e:
+            return 0, cf.all_incorrect
         comment = self._conditions2comment(failed_assertions, assertions)
         return grade, comment
 
@@ -38,6 +42,7 @@ class CodeParser:
         self.nr_assertions = assertions.count('assert')
         self.assertions_for_comments = []
         self.test_assertions = f"test_assertions = []\n"
+        # TODO: go over this part
         for i in assertions.split('assert'):
             if ' = ' in i or i.startswith('#'):
                 if ' ==' in i:
@@ -45,7 +50,12 @@ class CodeParser:
                     for j in i.split('\n\n'):
                         if ' ==' in j:
                             self.assertions_for_comments.append(j.strip())
-                            self.test_assertions += f'test_assertions.append({j.strip()})\n'
+                            self.test_assertions += f"""try:
+    test_assertions.append({j.strip()})
+except:
+    test_assertions.append(False)\n"""
+
+                            # self.test_assertions += f'test_assertions.append({j.strip()})\n'
                         else:
                             self.test_assertions += f"{j}\n"
                 else:
@@ -53,7 +63,12 @@ class CodeParser:
                     self.test_assertions += f"{i}"
             else:
                 self.assertions_for_comments.append(i.strip())
-                self.test_assertions += f'test_assertions.append({i.strip()})\n'
+                self.test_assertions += f"""try:
+    test_assertions.append({i.strip()})
+except:
+    test_assertions.append(False)\n"""
+
+                # self.test_assertions += f'test_assertions.append({i.strip()})\n'
 
     @staticmethod
     def _conditions2comment(failed_assertions, assertions):

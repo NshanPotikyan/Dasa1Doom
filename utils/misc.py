@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 
-import configs as cf
+from configs import general as cf
 from utils.code_similarity import detect, summarize
 
 

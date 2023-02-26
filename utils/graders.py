@@ -1,9 +1,11 @@
 import glob
 import os
 import numpy as np
+import pandas as pd
+from tqdm import tqdm
 
 import utils.misc as ut
-import configs as cf
+from configs import general as cf
 from utils.code_parser import CodeParser
 
 
@@ -29,7 +31,7 @@ class Grader:
         :param save_dendrograms: bool specifying whether to save dendrogram plots or not
         """
         self.path = path
-        self.student_ids = student_ids
+        self.student_ids = self._get_student_ids(student_ids)
         self.mode = mode
         self.with_assertions = with_assertions
         self.code_parser = CodeParser(hidden_assertions=hidden_assertions)
@@ -38,7 +40,7 @@ class Grader:
         self.comments = None
         self.detect_plagiarism = detect_plagiarism
         self.plagiarism_tol_level = plagiarism_tol_level
-        self.students = [i for i in student_ids.keys()]
+        self.students = [i for i in self.student_ids.keys()]
         self.save_dendrograms = save_dendrograms
         self.streamlit = streamlit
 
@@ -56,6 +58,15 @@ class Grader:
         self.points = self._get_points_dict(points)
 
         self.grade_dict = {}
+
+    @staticmethod
+    def _get_student_ids(students):
+        if isinstance(students, dict):
+            return students
+        elif isinstance(students, str):
+            # in case we provide a csv file with Ids, Names columns
+            student_data = pd.read_csv(students, header=None)
+            return dict(zip(student_data[1], student_data[0]))
 
     def _get_points_dict(self, points):
         """
@@ -109,13 +120,13 @@ class Grader:
             self.comments = {}
 
         # loop over all problems per person and store the results in the grade_dict
-        for hw in self.files:
+        for hw in tqdm(self.files):
             # get student name from the file name (e.g. HW1_Loops_PoghosPoghosyan.ipynb)
             name = ut.get_student_name(file_name=hw)
 
             assert name in self.student_ids, f"{name} student is not found"
 
-            # self.show(f'Processing {name}s homework')
+            self.show(f'Processing {name}s homework')
 
             # open and read the notebook file
             notebook = ut.notebook_to_dict(file_name=hw)
@@ -162,7 +173,7 @@ class Grader:
 
                     if self.with_assertions:
                         # getting the problem number
-                        code = code + '\n###\n' + ut.join(cells[i + 2]['source'])
+                        code = code #+ '\n###\n' #+ ut.join(cells[i + 2]['source'])
 
                     grade, comment = self.get_grade_comment(cell, code, problem_nr)
 
@@ -241,7 +252,7 @@ class Grader:
                 cell = cells[idx]  # problem description
                 code = cells[idx + 1]  # code from the student
                 if self.with_assertions:
-                    code = code + '\n###\n' + cells[idx+2]
+                    code = code #+ '\n###\n' #+ cells[idx + 2]
 
                 grade, comment = self.get_grade_comment(cell, code, i)
 
@@ -420,6 +431,7 @@ class Grader:
                                                   code_cell=code)
             except Exception as e:
                 print(e)
+
                 grade, comment = self._get_grade_comment_without_assertions(code, problem_nr)
             return grade, comment
         return self._get_grade_comment_without_assertions(code, problem_nr)

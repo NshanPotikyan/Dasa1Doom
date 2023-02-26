@@ -9,10 +9,6 @@ plagiarism_tol_level = 0.9
 save_dendrograms = False
 dependencies = "import numpy as np"
 
-student_ids = {
-    'AramAramyan': 1,
-    'ArmenAshotyan': 2,
-}
 
 # in Armenian
 grade_title = 'Գնահատական'
