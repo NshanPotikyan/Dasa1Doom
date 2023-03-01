@@ -6,15 +6,24 @@ from tqdm import tqdm
 
 import utils.misc as ut
 from configs import general as cf
-from utils.code_parser import CodeParser
+from utils.assertion_parser import AssertionParser
 
 
 class Grader:
 
-    def __init__(self, path=None, student_ids=None, mode='per_student',
-                 nr_problems=None, with_assertions=False,
-                 points=None, hidden_assertions=None, save_comments=False,
-                 detect_plagiarism=False, plagiarism_tol_level=0.9, save_dendrograms=False, streamlit=False):
+    def __init__(self, path=None,
+                 student_ids=None,
+                 mode='per_student',
+                 nr_problems=None,
+                 with_assertions=False,
+                 points=None,
+                 hidden_assertions=None,
+                 save_comments=False,
+                 detect_plagiarism=False,
+                 plagiarism_tol_level=0.9,
+                 save_dendrograms=False,
+                 save_dir='graded',
+                 streamlit=False):
         """
         Constructs the grader object
         :param path: str of the path to the jupyter notebook files
@@ -34,7 +43,7 @@ class Grader:
         self.student_ids = self._get_student_ids(student_ids)
         self.mode = mode
         self.with_assertions = with_assertions
-        self.code_parser = CodeParser(hidden_assertions=hidden_assertions)
+        self.assertion_parser = AssertionParser(hidden_assertions=hidden_assertions)
         self.hidden_assertions = hidden_assertions
         self.save_comments = save_comments
         self.comments = None
@@ -45,6 +54,11 @@ class Grader:
         self.streamlit = streamlit
 
         if isinstance(path, str):
+            save_dir = os.path.join(self.path, save_dir)
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            self.save_dir = save_dir
+
             self.files = glob.glob(os.path.join(f'{path}', '*ipynb'))
         else:
             # in case of uploaded files (streamlit)
@@ -67,6 +81,10 @@ class Grader:
             # in case we provide a csv file with Ids, Names columns
             student_data = pd.read_csv(students, header=None)
             return dict(zip(student_data[1], student_data[0]))
+
+    def _save_graded(self, file_name, file_dict):
+        file_name = os.path.join(self.save_dir, os.path.basename(file_name))
+        ut.dict_to_notebook(file_name=file_name, some_dict=file_dict)
 
     def _get_points_dict(self, points):
         """
@@ -150,8 +168,8 @@ class Grader:
                 # if starts with a number:
                 if self._contains_problem_statement(cell):
 
-                    # problem_nr = int(''.join([nr for nr in cell.strip() if nr.isdigit()]))
                     problem_nr += 1
+
                     # check if the problem is already graded
                     try:
                         grade_cell = ut.join(cells[i + 2 + self.with_assertions]['source'])
@@ -170,10 +188,6 @@ class Grader:
 
                     # code will be in the next cell
                     code = ut.join(cells[i + 1]['source'])
-
-                    if self.with_assertions:
-                        # getting the problem number
-                        code = code #+ '\n###\n' #+ ut.join(cells[i + 2]['source'])
 
                     grade, comment = self.get_grade_comment(cell, code, problem_nr)
 
@@ -197,8 +211,8 @@ class Grader:
 
                     inserted_cells += 2
                     total_grade += grade
-                    ut.dict_to_notebook(some_dict=notebook,
-                                        file_name=hw)
+                    self._save_graded(file_dict=notebook, file_name=hw)
+
             total_grade = round(total_grade)
             self.grade_dict[name] = total_grade
 
@@ -207,8 +221,8 @@ class Grader:
                                           position=len(notebook['cells']),
                                           content=total_grade,
                                           content_type='total_grade')
-                ut.dict_to_notebook(some_dict=notebook,
-                                    file_name=hw)
+                self._save_graded(file_dict=notebook, file_name=hw)
+
         self.grades_to_txt()
 
     def grade_per_problem(self):
@@ -251,8 +265,6 @@ class Grader:
 
                 cell = cells[idx]  # problem description
                 code = cells[idx + 1]  # code from the student
-                if self.with_assertions:
-                    code = code #+ '\n###\n' #+ cells[idx + 2]
 
                 grade, comment = self.get_grade_comment(cell, code, i)
 
@@ -275,8 +287,7 @@ class Grader:
 
                 self.grade_dict[student] = self.grade_dict.get(student, 0) + float(grade)
 
-                ut.dict_to_notebook(some_dict=notebook,
-                                    file_name=hw)
+                self._save_graded(file_dict=notebook, file_name=hw)
 
         self.grades_to_txt()
 
@@ -370,8 +381,7 @@ class Grader:
                                       content=cf.plagiarism_comment,
                                       content_type='comment')
 
-            ut.dict_to_notebook(some_dict=notebook,
-                                file_name=hw)
+            self._save_graded(file_dict=notebook, file_name=hw)
 
     def get_student_hw(self, student_name, letter_tolerance=2):
         """
@@ -424,16 +434,17 @@ class Grader:
         :param problem_nr: int of the problem number
         :return:
         """
-        # self.show(cell)
         if self.with_assertions:
             try:
-                grade, comment = self.code_parser(problem_id=problem_nr,
-                                                  code_cell=code)
+                grade, comment = self.assertion_parser(problem_id=problem_nr,
+                                                       code_cell=code)
             except Exception as e:
                 print(e)
 
                 grade, comment = self._get_grade_comment_without_assertions(code, problem_nr)
             return grade, comment
+        self.show(cell)
+
         return self._get_grade_comment_without_assertions(code, problem_nr)
 
     def _rel2abs_grade(self, grade, problem_nr):
@@ -445,8 +456,8 @@ class Grader:
         :return: float of the grade
         """
         grade = float(grade)
-        grade *= round(self.points.get(problem_nr, 1), 1)
-        return grade
+        grade *= self.points.get(problem_nr, 1)
+        return round(grade, 2)
 
     def _get_grade_comment_without_assertions(self, code, problem_nr):
         """

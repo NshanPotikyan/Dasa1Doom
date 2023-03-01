@@ -81,6 +81,7 @@ if __name__ == "__main__":
                     detect_plagiarism=detect_plagiarism,
                     plagiarism_tol_level=plagiarism_tol_level,
                     save_dendrograms=save_dendrograms,
+                    save_dir='graded',
                     streamlit=False)
     grader.grade()
 

@@ -1,7 +1,7 @@
 from configs import general as cf
 
 
-class CodeParser:
+class AssertionParser:
 
     def __init__(self, hidden_assertions):
         self.hidden_assertions = hidden_assertions if hidden_assertions is not None else {}
@@ -10,28 +10,27 @@ class CodeParser:
         self.test_assertions = ''
 
     def __call__(self, problem_id, code_cell):
-        # only_code, assertions = code_cell.split('\n###\n')
         only_code = code_cell.strip()
 
-        assertions = f'{self.hidden_assertions.get(problem_id, "")}'
+        assertions = self.hidden_assertions.get(problem_id, "")
 
         if 'return' not in only_code:
-            # in case the excerise is not completed e.g.
+            # in case the exercise is not completed e.g.
             # the function has no return statement
-            # func_name = only_code[:only_code.index('(')].replace('def ', '')
             only_code = ""
 
         only_code = f'{cf.dependencies}\n{only_code}'
-
+        # print(only_code, end='\n')
+        # print(assertions)
         self._process_assertions(assertions)
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"
         final_code = f"{only_code}\n{self.test_assertions}\n{grade_str}\n{failed}"
-        # print(final_code)
         try:
             exec(final_code, globals())
         except Exception as e:
-            return 0, cf.all_incorrect
+            print(e)
+            # return 0, cf.all_incorrect
         comment = self._conditions2comment(failed_assertions, assertions)
         return grade, comment
 
@@ -44,6 +43,8 @@ class CodeParser:
         self.test_assertions = f"test_assertions = []\n"
         # TODO: go over this part
         for i in assertions.split('assert'):
+            if not i:
+                continue
             if ' = ' in i or i.startswith('#'):
                 if ' ==' in i:
                     # in case the assertion line is here
@@ -89,6 +90,12 @@ except:
 
 
 if __name__ == '__main__':
-    sample_code = """ """
-    code_parser = CodeParser(hidden_assertions=None)
-    print(code_parser(code_cell=sample_code, problem_id=0))
+    from sample_homeworks.hw1.assertions import hidden_assertions
+    sample_code = """def dist(a,b):
+    if len(a) == len(b):
+        return np.sqrt(sum((b-a)**2))
+    else:
+        return "DimensionError"
+"""
+    assertion_parser = AssertionParser(hidden_assertions=hidden_assertions)
+    print(assertion_parser(code_cell=sample_code, problem_id=1))

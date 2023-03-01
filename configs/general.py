@@ -7,7 +7,7 @@ points = 'stars'  # {k: 1 for k in range(1, nr_problems+1)}
 detect_plagiarism = False
 plagiarism_tol_level = 0.9
 save_dendrograms = False
-dependencies = "import numpy as np"
+dependencies = "import numpy as np\nfrom typing import Union, List"
 
 
 # in Armenian
