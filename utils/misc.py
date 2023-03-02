@@ -161,9 +161,9 @@ def detect_summarize(pycode_list, names, tolerance_level=0.9):
                     sum_plagiarism_percent * 100, names[i], names[index + i]))
                 print(names[i], pycode_list[i], sep='\n****\n')
                 print(names[i + index], pycode_list[i + index], sep='\n****\n')
-                penalize = input('Do you want to penalize for plagiarism? Yes(1) or No(2)')
-                if penalize:
-                    cheaters.append([names[i], names[i + index]])
+                # penalize = input('Do you want to penalize for plagiarism? Yes(1) or No(2)')
+                # if penalize:
+                cheaters.append([names[i], names[i + index]])
 
     # make the similarity matrix symmetric
     i_lower = np.tril_indices(nr_codes, -1)
@@ -187,7 +187,7 @@ def plot_dendrogram(matrix, labels=None, title='', color_threshold=0.3, linkage_
     linkage_matrix = linkage(dists, linkage_type)
     plt.figure(figsize=(15, 10))
     dendrogram(linkage_matrix, color_threshold=color_threshold,
-               labels=labels, show_contracted=True, leaf_rotation=30)
+               labels=labels, show_contracted=True, leaf_rotation=90)
     plt.ylabel('Dissimilarity')
     plt.title(f'{title}')
     plt.savefig(f'{title}.jpg')

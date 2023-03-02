@@ -20,17 +20,15 @@ class AssertionParser:
             only_code = ""
 
         only_code = f'{cf.dependencies}\n{only_code}'
-        # print(only_code, end='\n')
-        # print(assertions)
         self._process_assertions(assertions)
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"
         final_code = f"{only_code}\n{self.test_assertions}\n{grade_str}\n{failed}"
+
         try:
             exec(final_code, globals())
         except Exception as e:
-            print(e)
-            # return 0, cf.all_incorrect
+            return 0, f'{cf.all_incorrect} ({e})'
         comment = self._conditions2comment(failed_assertions, assertions)
         return grade, comment
 
@@ -41,7 +39,6 @@ class AssertionParser:
         self.nr_assertions = assertions.count('assert')
         self.assertions_for_comments = []
         self.test_assertions = f"test_assertions = []\n"
-        # TODO: go over this part
         for i in assertions.split('assert'):
             if not i:
                 continue
@@ -50,26 +47,21 @@ class AssertionParser:
                     # in case the assertion line is here
                     for j in i.split('\n\n'):
                         if ' ==' in j:
-                            self.assertions_for_comments.append(j.strip())
-                            self.test_assertions += f"""try:
-    test_assertions.append({j.strip()})
-except:
-    test_assertions.append(False)\n"""
-
-                            # self.test_assertions += f'test_assertions.append({j.strip()})\n'
+                            self._assertion2test(j)
                         else:
                             self.test_assertions += f"{j}\n"
                 else:
                     # in case of non-assertion line
                     self.test_assertions += f"{i}"
             else:
-                self.assertions_for_comments.append(i.strip())
-                self.test_assertions += f"""try:
-    test_assertions.append({i.strip()})
+                self._assertion2test(i)
+
+    def _assertion2test(self, assertion):
+        self.assertions_for_comments.append(assertion.strip())
+        self.test_assertions += f"""try:    
+    test_assertions.append({assertion.strip()})
 except:
     test_assertions.append(False)\n"""
-
-                # self.test_assertions += f'test_assertions.append({i.strip()})\n'
 
     @staticmethod
     def _conditions2comment(failed_assertions, assertions):
@@ -90,12 +82,9 @@ except:
 
 
 if __name__ == '__main__':
-    from sample_homeworks.hw1.assertions import hidden_assertions
-    sample_code = """def dist(a,b):
-    if len(a) == len(b):
-        return np.sqrt(sum((b-a)**2))
-    else:
-        return "DimensionError"
-"""
+    from asds.asds_hw1.assertions import hidden_assertions
+
+    sample_code = """def find(a):
+    return np.arange(len(a))[np.isnan(a)]"""
     assertion_parser = AssertionParser(hidden_assertions=hidden_assertions)
-    print(assertion_parser(code_cell=sample_code, problem_id=1))
+    print(assertion_parser(code_cell=sample_code, problem_id=3))

@@ -20,6 +20,7 @@ class Grader:
                  hidden_assertions=None,
                  save_comments=False,
                  detect_plagiarism=False,
+                 problems_to_check=[],
                  plagiarism_tol_level=0.9,
                  save_dendrograms=False,
                  save_dir='graded',
@@ -52,6 +53,7 @@ class Grader:
         self.students = [i for i in self.student_ids.keys()]
         self.save_dendrograms = save_dendrograms
         self.streamlit = streamlit
+        self.problems_to_check = problems_to_check
 
         if isinstance(path, str):
             save_dir = os.path.join(self.path, save_dir)
@@ -332,6 +334,8 @@ class Grader:
         """
         similarity_tensor = []
         for i in range(1, self.nr_problems + 1):
+            if i not in self.problems_to_check:
+                continue
             codes = []
             names = []
 
@@ -455,6 +459,7 @@ class Grader:
         :param problem_nr: int of the problem number
         :return: float of the grade
         """
+
         grade = float(grade)
         grade *= self.points.get(problem_nr, 1)
         return round(grade, 2)
