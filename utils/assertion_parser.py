@@ -2,7 +2,10 @@ from configs import general as cf
 
 
 class AssertionParser:
-
+    """
+    :param dict or None hidden_assertions: assertions used for grading, keys are problem ids, values
+        are tuples of (assertions, function_name) format
+    """
     def __init__(self, hidden_assertions):
         self.hidden_assertions = hidden_assertions if hidden_assertions is not None else {}
         self.assertions_for_comments = None
@@ -10,14 +13,20 @@ class AssertionParser:
         self.test_assertions = ''
 
     def __call__(self, problem_id, code_cell):
+        """
+        :param int problem_id: problem index
+        :param str code_cell: cell that contains the code
+        :returns: grade and comment
+        :rtype: tuple
+        """
         only_code = code_cell.strip()
 
-        assertions = self.hidden_assertions.get(problem_id, "")
+        assertions, func_name = self.hidden_assertions.get(problem_id, ["", ""])
 
         if 'return' not in only_code:
             # in case the exercise is not completed e.g.
             # the function has no return statement
-            only_code = ""
+            only_code = f"def {func_name}(*args, **kwargs): return -666"
 
         only_code = f'{cf.dependencies}\n{only_code}'
         self._process_assertions(assertions)
@@ -82,9 +91,12 @@ except:
 
 
 if __name__ == '__main__':
-    from asds.asds_hw1.assertions import hidden_assertions
+    from sample_homeworks.with_assertions.assertions import hidden_assertions
 
-    sample_code = """def find(a):
-    return np.arange(len(a))[np.isnan(a)]"""
+    sample_code1 = """def email_to_username(a):
+    return a.split('@')[0]"""
+
+    sample_code2 = """asdasdasd"""
     assertion_parser = AssertionParser(hidden_assertions=hidden_assertions)
-    print(assertion_parser(code_cell=sample_code, problem_id=3))
+    print(assertion_parser(code_cell=sample_code1, problem_id=3))
+    print(assertion_parser(code_cell=sample_code2, problem_id=3))

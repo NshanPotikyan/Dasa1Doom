@@ -3,4 +3,4 @@
 #     'ArmenAshotyan': 2,
 # }
 
-student_ids = 'asds/students.csv'
+student_ids = 'sample_homeworks/students.csv'

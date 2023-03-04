@@ -1,12 +1,97 @@
-import numpy as np
-import json
-import matplotlib.pyplot as plt
+import os
+import glob
+import pandas as pd
 
-from scipy.cluster.hierarchy import dendrogram, linkage
-from scipy.spatial.distance import squareform
 
-from configs import general as cf
-from utils.code_similarity import detect, summarize
+def get_file(files, file_name, letter_tolerance=0):
+    """
+    Finds the file by tolerating spelling errors in the file name
+    :param list[str] files:
+    :param str file_name: file name
+    :param letter_tolerance: int of the number of letters that can be misspelled
+    :return:
+    """
+    if not letter_tolerance:
+        # in case we do not care about spelling errors
+        return files[files.index(file_name)]
+
+    similarity = 10
+    for idx, file in enumerate(files):
+        if file_name in file:
+            return file
+        name = file[-len(file_name):]
+        current_similarity = hamming_dist(file_name, name)
+        if current_similarity < similarity:
+            similarity = current_similarity
+            best_idx = idx
+    if similarity <= letter_tolerance:
+        return files[best_idx]
+    else:
+        print(f"{file_name}'s file was not found, \
+        please make sure the file name was written correctly otherwise \
+        the file is considered not submitted.")
+        return None
+
+
+def grades2dict(path, file_name='results.txt', to_csv=False):
+    """
+    Collects the grades from txt file into a dict and
+    optionally creates a csv file of (id, grade) pairs.
+
+    :param str path: directory of the txt file
+    :param str file_name: name of the txt file
+    :param bool to_csv: specifies whether to save the csv file
+    :returns: name to grades mapping
+    :rtype: dict
+    """
+    file = os.path.join(path, file_name)
+    if not os.path.exists(file):
+        raise FileNotFoundError(file)
+    grades = pd.read_csv(os.path.join(path, file_name),
+                         header=None,
+                         sep='  ')
+    if to_csv:
+        import warnings
+        warnings.filterwarnings('ignore')
+
+        grades_csv = grades.copy()
+        grades_csv[2][grades_csv[2] == -1] = 0
+        grades_csv.loc[:, [0, 2]].to_csv(
+            os.path.join(path, file_name.replace('.txt', '.csv')), index=False)
+
+    return dict(zip(grades[1], grades[2]))
+
+
+def get_student_info(students, emails=False):
+    """
+    Collects students to ids mapping, or optionally students to emails mapping.
+
+    :param dict or str students: either the final dict is provided, or path to the csv file
+        that contains 0 (Ids), 1 (Names) or 0 (Ids), 1 (Names), 2 (Emails) columns
+    :param bool emails: specifies whether we want to get the students to emails mapping
+    :returns:
+    :rtype: dict
+    """
+    if isinstance(students, dict):
+        return students
+    elif isinstance(students, str):
+        # in case we provide a csv file with Ids, Names columns
+        student_data = pd.read_csv(students, header=None)
+        if emails:
+            return dict(zip(student_data[1], student_data[2]))
+        return dict(zip(student_data[1], student_data[0]))
+
+
+def get_files(path, file_type='ipynb'):
+    """
+    Reads all the file paths of given extension.
+
+    :param str path: directory of interest
+    :param str file_type: the type of files we want to get paths for
+    :returns:
+    :rtype: list
+    """
+    return glob.glob(os.path.join(f'{path}', f'*{file_type}'))
 
 
 def normalize_dict(some_dict, values_sum=100):
@@ -22,11 +107,6 @@ def normalize_dict(some_dict, values_sum=100):
     return {k: round(v / total_sum * values_sum, 2) for k, v in some_dict.items()}
 
 
-def append_tab(some_str):
-    out = '\n\t'.join(some_str.split('\n'))
-    return f'\t{out}\n'
-
-
 def get_grade(text):
     import streamlit as st
 
@@ -39,89 +119,31 @@ def get_grade(text):
         return grade
 
 
-def join(text):
-    """
-    Helper function to join the strings in a list
-    :param text: list of strings
-    :returns: string
-    """
-    return ''.join(text)
-
-
-def notebook_to_dict(file_name):
-    """
-    Function for loading the jupyter notebook as a dict
-    :param file_name: str of the .ipynb file name
-    :return: dict
-    """
-    if isinstance(file_name, str):
-        file_name = open(file_name, mode='r', encoding="utf8")
-    return json.load(file_name)
-
-
 def get_student_name(file_name):
+    """
+    Parses student name from file name.
+
+    :param str file_name: should be of the following format something_name.ipynb
+    :returns: student name
+    :rtype: str
+    """
     if not isinstance(file_name, str):
         # the case of streamlit
         file_name = file_name.name
     return file_name.split('_')[-1][:-6]
 
 
-def dict_to_notebook(some_dict, file_name):
+def read_txt(path, file_name):
     """
-    Function for writing a jupyter notebook (JN) file (.ipynb)
-    from a dict
-    :param some_dict: dict that has a special format for JN files
-    :param file_name: str of the JN file name
-    :return:
-    """
-    if not isinstance(file_name, str):
-        # case of streamlit
-        file_name = file_name.name
-    with open(file_name, mode='w') as f:
-        json.dump(some_dict, f)
+    Reads a txt file.
 
-
-def insert_cell(notebook, position, content, content_type):
+    :param str path: directory of the file
+    :param str file_name: name ending with .txt
+    :return: file content
+    :rtype: str
     """
-    Inserts a new text cell inside the given notebook
-    :param notebook: dict of the JN file
-    :param position: int of the cell positional index
-    :param content: str of the content that needs to be added
-    :param content_type: str of the content type, currently it can be one of these
-                         'grade', 'comment', 'total_grade'
-    :return: dict of the modified JN file
-    """
-    notebook['cells'].insert(position,
-                             create_new_cell(content=content,
-                                             content_type=content_type))
-    return notebook
-
-
-def create_new_cell(content, content_type):
-    """
-    Generates a new text cell that will be added to the existing notebook
-    :param content: str of the content that needs to be added
-    :param content_type: str of the content type, currently it can be one of these
-                         'grade', 'comment', 'total_grade', 'empty'
-    :return:
-    """
-    if content_type == 'grade':
-        title = f"<font color='red'>**{cf.grade_title}:**</font>"
-    elif content_type == 'empty':
-        title = ""
-        content = ""
-    elif content_type == 'comment':
-        title = f"<font color='red'>**{cf.comment_title}:**</font>"
-    elif content_type == 'total_grade':
-        title = f"<font color='red'>**{cf.total_grade_title}:**</font>"
-    else:
-        raise Exception(f"""The content_type was not specified correctly.
-        Should be one of these 'grade', 'comment', 'total_grade', 'empty', but {content_type}
-        was provided.
-        """)
-    return {'cell_type': 'markdown',
-            'metadata': {'id': ''},
-            'source': [f'{title} {content}']}
+    with open(os.path.join(path, file_name)) as f:
+        return f.read()
 
 
 def hamming_dist(str1, str2):
@@ -135,59 +157,3 @@ def hamming_dist(str1, str2):
     for i in range(len(str1)):
         dist += (str2[i] != str1[i]) * 1
     return dist
-
-
-def detect_summarize(pycode_list, names, tolerance_level=0.9):
-    """
-    Goes over all code strings and looks for potential plagiarism
-    :param pycode_list: list of str containing python code
-    :param names: list of str containing student names
-    :param tolerance_level: float of the plagiarism tolerance level
-    :return:
-    """
-    nr_codes = len(pycode_list)
-    similarity_matrix = np.ones((nr_codes, nr_codes))
-    cheaters = []
-    for i in range(nr_codes):
-        try:
-            results = detect(pycode_list[i:], keep_prints=True, module_level=True)
-        except SyntaxError:
-            continue
-        for index, func_ast_diff_list in results:
-            sum_plagiarism_percent, _, _ = summarize(func_ast_diff_list)
-            similarity_matrix[i, index + i] = round(sum_plagiarism_percent, 2)
-            if sum_plagiarism_percent > tolerance_level:
-                print('{:.2f} % of {} code structure is similar with {} code structure.'.format(
-                    sum_plagiarism_percent * 100, names[i], names[index + i]))
-                print(names[i], pycode_list[i], sep='\n****\n')
-                print(names[i + index], pycode_list[i + index], sep='\n****\n')
-                # penalize = input('Do you want to penalize for plagiarism? Yes(1) or No(2)')
-                # if penalize:
-                cheaters.append([names[i], names[i + index]])
-
-    # make the similarity matrix symmetric
-    i_lower = np.tril_indices(nr_codes, -1)
-    similarity_matrix[i_lower] = similarity_matrix.T[i_lower]
-    return cheaters, similarity_matrix
-
-
-def plot_dendrogram(matrix, labels=None, title='', color_threshold=0.3, linkage_type='single'):
-    """
-    Plot the dendrogram of the clustering
-    :param matrix: numpy array of similarity matrix
-    :param labels: list of str for leaf names
-    :param title: str of the plot title
-    :param color_threshold: float for coloring the tree linkages as clusters, below the specified value
-    :param linkage_type: str type of linkage to apply (see sklearn documentation for more info)
-    :return:
-    """
-    if labels is None:
-        labels = [f'{i}' for i in np.arange(len(matrix))]
-    dists = squareform(matrix)
-    linkage_matrix = linkage(dists, linkage_type)
-    plt.figure(figsize=(15, 10))
-    dendrogram(linkage_matrix, color_threshold=color_threshold,
-               labels=labels, show_contracted=True, leaf_rotation=90)
-    plt.ylabel('Dissimilarity')
-    plt.title(f'{title}')
-    plt.savefig(f'{title}.jpg')

@@ -1,20 +1,10 @@
-import os
-import time
-import warnings
-import sys
-import json
-
-import pandas as pd
 import streamlit as st
 
 from datetime import datetime
 
-from utils import notebook_to_dict, join
 from graders import Grader
 
 if __name__ == '__main__':
-    # warnings.filterwarnings('ignore')
-
     # should be the folder on the server
     st.set_page_config(layout="wide", page_icon="", page_title="Homework Grader", )
 
@@ -32,7 +22,6 @@ if __name__ == '__main__':
         help="To activate 'wide mode', go to the hamburger menu > Settings > turn on 'wide mode'",
     )
 
-    start = time.time()
     if not uploaded_files:
         st.info(
             f"""

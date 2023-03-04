@@ -2,6 +2,8 @@ import argparse
 from configs import general as cf
 from configs import students as sc
 from utils.graders import Grader
+from utils.assertion_parser import AssertionParser
+from utils.plagiarism_detector import PlagiarismDetector
 
 parser = argparse.ArgumentParser(description="Homework checking.")
 
@@ -19,15 +21,19 @@ parser.add_argument('--save_comments', action='store_true',
                     help="If True, then there will be comment recommendation based on previous comments.")
 parser.add_argument('--detect_plagiarism', action='store_true',
                     help="If True, then the codes will be analyzed for potential plagiarism.")
+parser.add_argument('--problems_to_check', nargs='+', default=None, type=int,
+                    help="problems to check for plagiarism.")
 parser.add_argument('--plagiarism_tol_level', type=float, default=None,
                     help="Float between 0 and 1 for the plagiarism tolerance level.")
 parser.add_argument('--save_dendrograms', action='store_true',
                     help="If True, then the dendrogram plot of cheating clusters will be saved.")
-
+parser.add_argument('--save_dir', type=str, default='graded',
+                    help="folder name for the graded notebooks and generated plots to be saved in.")
 
 args = parser.parse_args()
 
 if __name__ == "__main__":
+    # TODO: write a config parser instead of this if/else's
     if args.path:
         path = args.path
     else:
@@ -45,30 +51,29 @@ if __name__ == "__main__":
 
     if args.with_assertions:
         import sys
+
         sys.path.append(path)
         try:
             from assertions import hidden_assertions
         except ModuleNotFoundError:
             hidden_assertions = None
         with_assertions = args.with_assertions
+        assertion_parser = AssertionParser(hidden_assertions=hidden_assertions)
     else:
         with_assertions = cf.with_assertions
         hidden_assertions = None
+        assertion_parser = None
+
+    save_dir = args.save_dir
 
     if args.detect_plagiarism:
-        detect_plagiarism = args.detect_plagiarism
+        plagiarism_detector = PlagiarismDetector(save_dir=save_dir,
+                                                 tol_level=args.plagiarism_tol_level,
+                                                 save_dendrograms=args.save_dendrograms,
+                                                 problems_to_check=args.problems_to_check,
+                                                 add_one_cell=with_assertions)
     else:
-        detect_plagiarism = cf.detect_plagiarism
-
-    if args.plagiarism_tol_level:
-        plagiarism_tol_level = args.plagiarism_tol_level
-    else:
-        plagiarism_tol_level = cf.plagiarism_tol_level
-
-    if args.save_dendrograms:
-        save_dendrograms = args.save_dendrograms
-    else:
-        save_dendrograms = cf.save_dendrograms
+        plagiarism_detector = None
 
     grader = Grader(path=path,
                     student_ids=sc.student_ids,
@@ -76,13 +81,9 @@ if __name__ == "__main__":
                     nr_problems=nr_problems,
                     with_assertions=with_assertions,
                     points=cf.points,
-                    hidden_assertions=hidden_assertions,
+                    assertion_parser=assertion_parser,
+                    plagiarism_detector=plagiarism_detector,
                     save_comments=args.save_comments,
-                    detect_plagiarism=detect_plagiarism,
-                    plagiarism_tol_level=plagiarism_tol_level,
-                    save_dendrograms=save_dendrograms,
-                    problems_to_check=[4, 5, 6, 8, 9, 10],
-                    save_dir='graded',
+                    save_dir=save_dir,
                     streamlit=False)
     grader.grade()
-
