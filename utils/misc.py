@@ -130,7 +130,20 @@ def get_student_name(file_name):
     if not isinstance(file_name, str):
         # the case of streamlit
         file_name = file_name.name
-    return file_name.split('_')[-1][:-6]
+
+    file_name = os.path.basename(file_name)
+    nr_underscores = file_name.count('_')
+    splits = file_name.split('_')
+    if nr_underscores == 2:
+        # in case namesurname.ipynb or name-surname.ipynb
+        return remove_symbols(splits[-1][:-6])
+    elif nr_underscores == 3:
+        # in case name_surname.ipynb
+        return splits[-2] + splits[-1][:-6]
+
+
+def remove_symbols(name):
+    return ''.join([i for i in name if i.isalpha()])
 
 
 def read_txt(path, file_name):

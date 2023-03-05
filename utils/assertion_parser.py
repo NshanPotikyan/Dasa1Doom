@@ -11,6 +11,9 @@ class AssertionParser:
         self.assertions_for_comments = None
         self.nr_assertions = None
         self.test_assertions = ''
+        # run the dependencies globally (e.g. imports)
+        dependencies = self.hidden_assertions.get(0, "")
+        exec(dependencies, globals())
 
     def __call__(self, problem_id, code_cell):
         """
@@ -28,7 +31,6 @@ class AssertionParser:
             # the function has no return statement
             only_code = f"def {func_name}(*args, **kwargs): return -666"
 
-        only_code = f'{cf.dependencies}\n{only_code}'
         self._process_assertions(assertions)
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"

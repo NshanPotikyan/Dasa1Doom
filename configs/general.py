@@ -5,8 +5,6 @@ with_assertions = False
 nr_problems = None
 points = 'stars'  # {k: 1 for k in range(1, nr_problems+1)}
 plagiarism_tol_level = 0.9
-dependencies = "import numpy as np\nfrom typing import Union, List"
-
 
 # in Armenian
 grade_title = 'Գնահատական'

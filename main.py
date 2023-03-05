@@ -1,6 +1,5 @@
 import argparse
 from configs import general as cf
-from configs import students as sc
 from utils.graders import Grader
 from utils.assertion_parser import AssertionParser
 from utils.plagiarism_detector import PlagiarismDetector
@@ -11,6 +10,7 @@ parser.add_argument('--path', default='sample_homeworks/with_assertions',
                     help="The path to the jupyter notebook files.")
 parser.add_argument('--mode', default='per_student',
                     help="The grading mode, supports either 'per_problem' or 'per_student' grading")
+parser.add_argument('--student_ids', type=str, help="path to the csv file that contains students names, emails.")
 parser.add_argument('--nr_problems', type=int, default=None,
                     help="The number of problems to be checked, \
                      if None, then the number of problems will be determined automatically from one of the files.")
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         plagiarism_detector = None
 
     grader = Grader(path=path,
-                    student_ids=sc.student_ids,
+                    student_ids=args.student_ids,
                     mode=mode,
                     nr_problems=nr_problems,
                     with_assertions=with_assertions,
