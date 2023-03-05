@@ -122,12 +122,12 @@ class Grader:
         # loop over all problems per person and store the results in the grade_dict
         for hw in tqdm(self.files):
             # get student name from the file name (e.g. HW1_Loops_PoghosPoghosyan.ipynb)
-            name = um.get_student_name(file_name=hw)
+            student = um.get_student_name(file_name=hw)
 
-            if name not in self.student_ids:
-                self.show(f"{name} student is not found")
+            if student not in self.student_ids:
+                self.show(f"{student} student is not found")
 
-            self.show(f'Processing {name}s homework')
+            # self.show(f'Processing {name}s homework')
 
             # open and read the notebook file
             notebook = un.notebook_to_dict(file_name=hw)
@@ -137,7 +137,6 @@ class Grader:
             nr_cells = len(cells)
 
             inserted_cells = 0
-            total_grade = 0
             all_checked = True
             problem_nr = 0
 
@@ -158,7 +157,9 @@ class Grader:
 
                         grade_cell = un.join(cells[i + 2 + self.with_assertions]['source'])
                         if cf.grade_title in grade_cell and cf.total_grade_title not in grade_cell:
-                            total_grade += float(grade_cell.split(' ')[-1])
+                            grade = float(grade_cell.split(' ')[-1])
+                            self.grade_dict[student] = self.grade_dict.get(student, 0) + grade
+
                             if self.save_comments:
                                 comment_cell = un.join(cells[i + 3 + self.with_assertions]['source'])
                                 self.comments[problem_nr] = self.comments.get(problem_nr, '') + \
@@ -194,16 +195,15 @@ class Grader:
                         self.comments[problem_nr] = self.comments.get(problem_nr, '') + comment + '\n'
 
                     inserted_cells += 2
-                    total_grade += grade
-                    un.save_notebook(save_dir=self.save_dir, file_dict=notebook, file_name=hw)
 
-            total_grade = round(total_grade)
-            self.grade_dict[name] = total_grade
+                    self.grade_dict[student] = self.grade_dict.get(student, 0) + float(grade)
+
+                    un.save_notebook(save_dir=self.save_dir, file_dict=notebook, file_name=hw)
 
             if not all_checked or cf.total_grade_title not in notebook['cells'][-1]:
                 notebook = un.insert_cell(notebook,
                                           position=len(notebook['cells']),
-                                          content=total_grade,
+                                          content=self.grade_dict.get(student, 0),
                                           content_type='total_grade')
                 un.save_notebook(file_dict=notebook, file_name=hw, save_dir=self.save_dir)
 
@@ -222,13 +222,14 @@ class Grader:
 
         # loop over the same problem over all students
 
-        for i in range(1, nr_problems + 1):
+        for problem_nr in range(1, nr_problems + 1):
 
             for j, student in enumerate(self.students):  # loop over each student
-                print(f'Problem{i}-{student}')
-                hw, notebook, cells, idx = un.find_cell_id_per_notebook(files=self.files,
-                                                                        file_name=student,
-                                                                        some_text=f'{cf.problem_starts_with}{i}')
+                # print(f'Problem{i}-{student}')
+                hw, notebook, cells, idx = un.find_cell_id_per_notebook(
+                    files=self.files,
+                    file_name=student,
+                    some_text=f'{cf.problem_starts_with}{problem_nr}')
 
                 if hw is None:
                     # no hw was submitted
@@ -243,7 +244,8 @@ class Grader:
                         self.grade_dict[student] = self.grade_dict.get(student, 0) + grade
                         if self.save_comments:
                             comment_cell = cells[idx + 3]
-                            self.comments[i] = self.comments.get(i, '') + comment_cell.split('</font> ')[-1] + '\n'
+                            self.comments[problem_nr] = self.comments.get(problem_nr, '') + \
+                                                        comment_cell.split('</font> ')[-1] + '\n'
                         continue
                 except IndexError:
                     # the case when it is the last problem that is not graded yet
@@ -252,13 +254,13 @@ class Grader:
                 cell = cells[idx]  # problem description
                 code = cells[idx + 1]  # code from the student
 
-                grade, comment = self.get_grade_comment(cell, code, i)
+                grade, comment = self.get_grade_comment(cell, code, problem_nr)
 
                 if grade == 'ignore':
                     continue
 
                 # from relative to absolute grade
-                grade = self._rel2abs_grade(grade, problem_nr=i)
+                grade = self._rel2abs_grade(grade, problem_nr=problem_nr)
 
                 notebook = un.insert_cell(notebook,
                                           position=idx + 2 + self.with_assertions,
@@ -269,7 +271,7 @@ class Grader:
                                           content=comment,
                                           content_type='comment')
                 if self.save_comments:
-                    self.comments[i] = self.comments.get(i, '') + comment + '\n'
+                    self.comments[problem_nr] = self.comments.get(problem_nr, '') + comment + '\n'
 
                 self.grade_dict[student] = self.grade_dict.get(student, 0) + float(grade)
 

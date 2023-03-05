@@ -134,7 +134,7 @@ def get_student_name(file_name):
     file_name = os.path.basename(file_name)
     nr_underscores = file_name.count('_')
     splits = file_name.split('_')
-    if nr_underscores == 2:
+    if nr_underscores <= 2:
         # in case namesurname.ipynb or name-surname.ipynb
         return remove_symbols(splits[-1][:-6])
     elif nr_underscores == 3:
