@@ -51,7 +51,7 @@ class AssertionParser:
         self.assertions_for_comments = []
         self.test_assertions = f"test_assertions = []\n"
         for i in assertions.split('assert'):
-            if not i:
+            if not i.strip():
                 continue
             if ' = ' in i or i.startswith('#'):
                 if ' ==' in i:

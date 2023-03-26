@@ -2,7 +2,7 @@ import streamlit as st
 
 from datetime import datetime
 
-from graders import Grader
+from utils.graders import Grader
 
 if __name__ == '__main__':
     # should be the folder on the server
@@ -34,10 +34,8 @@ if __name__ == '__main__':
         # run the grader here
         st.sidebar.write("")
         grader = Grader(path=uploaded_files,
-                        student_ids={
-                            'AramAramyan': 1,
-                            'ArmenAshotyan': 2
-                        }, streamlit=True)
+                        student_ids='asds/students.csv',
+                        streamlit=True)
         grader.grade()
 
     # Insert comment
