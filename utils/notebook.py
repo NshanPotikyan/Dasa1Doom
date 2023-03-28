@@ -147,7 +147,7 @@ def find_cell_id_per_notebook(files, file_name, some_text):
             idx - int of the index of the problem code in the notebook
     :rtype: tuple
     """
-    file_name = um.get_file(files=files, file_name=file_name)
+    file_name = um.get_file(files=files, file_name=file_name, letter_tolerance=1)
 
     if file_name is None:
         return [None] * 4
