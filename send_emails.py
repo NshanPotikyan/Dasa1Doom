@@ -11,6 +11,8 @@ parser.add_argument('--path', default='sample_homeworks/hw1/graded_',
                     help="The path to the graded jupyter notebook files.")
 parser.add_argument('--subject',
                     help="Email subject.")
+parser.add_argument('--student_ids', type=str, help="path to the csv file that contains students names, emails.")
+
 
 args = parser.parse_args()
 

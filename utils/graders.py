@@ -51,6 +51,8 @@ class Grader:
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             self.save_dir = save_dir
+            if plagiarism_detector:
+                self.plagiarism_detector.save_dir = save_dir
 
             self.files = um.get_files(path=path, file_type='ipynb')
         else:
@@ -121,6 +123,9 @@ class Grader:
 
         # loop over all problems per person and store the results in the grade_dict
         for hw in tqdm(self.files):
+
+            self.assertion_parser.import_dependencies()
+
             # get student name from the file name (e.g. HW1_Loops_PoghosPoghosyan.ipynb)
             student = um.get_student_name(file_name=hw)
 

@@ -23,7 +23,7 @@ parser.add_argument('--detect_plagiarism', action='store_true',
                     help="If True, then the codes will be analyzed for potential plagiarism.")
 parser.add_argument('--problems_to_check', nargs='+', default=None, type=int,
                     help="problems to check for plagiarism.")
-parser.add_argument('--plagiarism_tol_level', type=float, default=None,
+parser.add_argument('--plagiarism_tol_level', type=float, default=0.9,
                     help="Float between 0 and 1 for the plagiarism tolerance level.")
 parser.add_argument('--save_dendrograms', action='store_true',
                     help="If True, then the dendrogram plot of cheating clusters will be saved.")

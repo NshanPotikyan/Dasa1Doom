@@ -12,7 +12,7 @@ def get_file(files, file_name, letter_tolerance=0):
     :return:
     """
     if not letter_tolerance:
-        # in case we do not care about spelling errors
+        # in case we do not care aboust spelling errors
         return files[files.index(file_name)]
 
     similarity = 10

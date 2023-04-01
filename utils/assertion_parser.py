@@ -6,11 +6,14 @@ class AssertionParser:
     :param dict or None hidden_assertions: assertions used for grading, keys are problem ids, values
         are tuples of (assertions, function_name) format
     """
+
     def __init__(self, hidden_assertions):
         self.hidden_assertions = hidden_assertions if hidden_assertions is not None else {}
         self.assertions_for_comments = None
         self.nr_assertions = None
         self.test_assertions = ''
+
+    def import_dependencies(self):
         # run the dependencies globally (e.g. imports)
         dependencies = self.hidden_assertions.get(0, "")
         exec(dependencies, globals())
@@ -35,9 +38,13 @@ class AssertionParser:
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"
         final_code = f"{only_code}\n{self.test_assertions}\n{grade_str}\n{failed}"
+        # print(final_code)
 
         try:
             exec(final_code, globals())
+            # if not input(''):
+            #     pass
+
         except Exception as e:
             return 0, f'{cf.all_incorrect} ({e})'
         comment = self._conditions2comment(failed_assertions, assertions)
@@ -51,7 +58,7 @@ class AssertionParser:
         self.assertions_for_comments = []
         self.test_assertions = f"test_assertions = []\n"
         for i in assertions.split('assert'):
-            if not i:
+            if not i.strip():
                 continue
             if ' = ' in i or i.startswith('#'):
                 if ' ==' in i:
@@ -69,7 +76,7 @@ class AssertionParser:
 
     def _assertion2test(self, assertion):
         self.assertions_for_comments.append(assertion.strip())
-        self.test_assertions += f"""try:    
+        self.test_assertions += f"""try:
     test_assertions.append({assertion.strip()})
 except:
     test_assertions.append(False)\n"""
@@ -88,8 +95,8 @@ except:
             return cf.default_comment
         else:
             return f"""{cf.assertion_comment}
-{failed_assertions}        
-""".replace('[', '').replace(']', '').replace('"', '')
+{str(failed_assertions)[1:-1]}        
+""".replace('"', '')
 
 
 if __name__ == '__main__':
