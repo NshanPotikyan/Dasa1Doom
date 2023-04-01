@@ -24,12 +24,15 @@ class KahootParser:
         :rtype: pandas.DataFrame
         """
         data = pd.read_excel(one_kahoot, sheet_name="RawReportData Data")
-        data = data[["Question Number", "Player", "Correct", "Answer Time (seconds)"]]
+        data = data[["Question Number", "Player",
+                     "Correct", "Answer Time (seconds)",
+                     "Time Allotted to Answer (seconds)"]]
         data.rename(columns={
             'Question Number': 'question_id',
             'Player': 'student',
             'Correct': 'correct',
-            'Answer Time (seconds)': 'time'
+            'Answer Time (seconds)': 'time',
+            'Time Allotted to Answer (seconds)': 'total_time'
         }, inplace=True)
         data.question_id = data.question_id.str.replace(' Quiz', '').astype(int)
 
