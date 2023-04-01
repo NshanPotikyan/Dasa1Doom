@@ -170,3 +170,27 @@ def hamming_dist(str1, str2):
     for i in range(len(str1)):
         dist += (str2[i] != str1[i]) * 1
     return dist
+
+
+def find_in_dict(some_dict, key):
+    """
+    Searches for key occurrences (approximate) in the given dict and
+    returns the matched keys.
+
+    :param dict[str, Any] some_dict:
+    :param str key: string of interest
+    :returns:
+    :rtype: list[str]
+    """
+
+    key = key.lower()
+    out = []
+    for k in some_dict:
+        if key in k.lower():
+            out.append(k)
+    return out
+
+
+def keep_letters(some_str):
+    """Keeps only the letters in a string."""
+    return ''.join(filter(str.isalpha, some_str))
