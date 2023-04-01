@@ -1,8 +1,10 @@
-# Homework Grader
+# Dasa1Doom
 
-This repository contains scripts which I use to semi-automate the homework grading process of the programming course that I teach.
+This repository contains scripts which I use to semi-automate the grading process of the programming courses that I teach.
 
-## Quick Start
+## Homework Grader
+
+### Quick Start
 
 1. First make sure you have the jupyter notebook files stored in
  a single directory and each file contains the student names in the following format: ``"something_NameSurname.ipynb"``. 
@@ -71,7 +73,7 @@ comments that were provided by the user.
 
 
 
-## Homework Format
+### Homework Format
 
 There are two major types of homeworks that can be graded using this tool:
 
@@ -125,7 +127,7 @@ as in the case of "*Homeworks Without Tests (Assertions)*"
 the program skips grading that problem automatically
 
 
-## TODO
+# TODO
 
 In future, I will try to add the following features:
 
@@ -136,5 +138,7 @@ In future, I will try to add the following features:
 - [x] Detect potential plagiarism using [pycode_similar](https://github.com/fyrestone/pycode_similar)
 
 - [x] Generate a dendrogram of students to detect potential clusters of cheating students
+
+- [x] Add Kahoot report parser
 
 - [ ] Create a minimal GUI 
