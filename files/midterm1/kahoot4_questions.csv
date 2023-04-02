@@ -1,0 +1,11 @@
+question_id,question,answer1,answer2,answer3,answer4,total_time
+1,Նշվածներից ո՞րն է սխալ pandas-ի Series տվյալների կառուցվածքի մասին,միաչափ զանգված է,կարող է իր մեջ պահել տարբեր օբյեկտներ,յուրաքանչյուր տվյալի համար պահվում է նաև ինդեքս,կարելի է ստեղծել միայն list-երից,60.0
+2,Նշվածներից ո՞րն է ճիշտ pandas DataFrame տեսակի տվյալների կառուցվածքի մասին,երկչափ զանգված է,"թե՛ տողերը, թե՛ սյուները պիտակավորված են",սյուները կարող են լինել անհամասեռ,նշվածներից բոլորը ճիշտ են,60.0
+3,Ի՞նչ կլինի հետևյալ կոդի արդյունքը,[answer image 1],[answer image 2],[answer image 3],[answer image 4],30.0
+4,Ի՞նչ կլինի հետևյալ կոդի արդյունքը,[answer image 1],[answer image 2],[answer image 3],[answer image 4],60.0
+5,"Տրված է data անունով հետևյալ DataFrame-ը։ Ի՞նչ կլինի data.iloc['a', :] հրամանի արդյունքը",[answer image 1],1.0,Error,"[1.0, 1. 20.0]",30.0
+6,"Տրված է data անունով հետևյալ DataFrame-ը։ Ո՞ր հրամանով կընտրենք այն բոլոր տողերը, որտեղ Quality=no և Attempts > 1  ","data.iloc[data.Quality == 'no' and data.Attempts > 1, :]","data.loc[:, (data.Quality == 'no') or (data.Attempts > 1)]",data[(data.Quality == 'no') & (data.Attempts > 1)],"data[(data.Quality == 'no') & (data.Attempts > 1), :]",60.0
+7,Ո՞ր հրամանով կստանանք այս DataFrame-ի վերջին տողի երրորդ սյան արժեքը,"data.iloc[-1, 2]","data.loc[-1, 2]","data.iloc[2, -1]","data.iloc[-1, 'Attempts']",60.0
+8,Ո՞ր հրամանով է հնարավոր փոխարինել տրված DataFrame-ի NaN արժեքը 4֊ով,"data.iloc[3, 'Score'] = 4","data.loc[3, 'Score'] = 4","data.iloc[3, 1] == 4",նշվածներից ոչ մեկով,60.0
+9,Ինչպե՞ս կարող ենք ընտրել Score սյան ամբողջ պարունակությունը։,data.Score,data[&#x27;Score&#x27;],"data.loc[:, &#x27;Score&#x27;]",Նշվածներից բոլոր տարբերակներով,60.0
+10,Ինչպե՞ս կարող ենք ընտրել 3-րդ տողի ամբողջ պարունակությունը։,"data.iloc[:, 2]","data.loc[2, :]","data[2, :]",Նշվածներից բոլոր տարբերակներով,60.0
