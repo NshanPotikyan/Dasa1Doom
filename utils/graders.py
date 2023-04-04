@@ -63,6 +63,8 @@ class Grader:
 
         if nr_problems is None:
             self.nr_problems = self.get_nr_problems()
+        else:
+            self.nr_problems = nr_problems
 
         self.points = self._get_points_dict(points)
 
@@ -154,6 +156,10 @@ class Grader:
                 # checking if the cell contains the problem description
                 # if starts with a number:
                 if un.cell_startswith(cell=cell, some_text=cf.problem_starts_with):
+
+                    if problem_nr == self.nr_problems:
+                        all_checked = False
+                        break
 
                     problem_nr += 1
 
