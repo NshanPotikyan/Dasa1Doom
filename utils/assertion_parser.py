@@ -38,12 +38,9 @@ class AssertionParser:
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"
         final_code = f"{only_code}\n{self.test_assertions}\n{grade_str}\n{failed}"
-        # print(final_code)
 
         try:
             exec(final_code, globals())
-            # if not input(''):
-            #     pass
 
         except Exception as e:
             return 0, f'{cf.all_incorrect} ({e})'
@@ -58,16 +55,12 @@ class AssertionParser:
         self.assertions_for_comments = []
         self.test_assertions = f"test_assertions = []\n"
         for i in assertions.split('assert'):
+
             if not i.strip():
                 continue
             if ' = ' in i or i.startswith('#'):
-                if ' ==' in i:
-                    # in case the assertion line is here
-                    for j in i.split('\n\n'):
-                        if ' ==' in j:
-                            self._assertion2test(j)
-                        else:
-                            self.test_assertions += f"{j}\n"
+                if ' ==' in i or ' !=' in i:
+                    self._assertion2test(i)
                 else:
                     # in case of non-assertion line
                     self.test_assertions += f"{i}"
@@ -75,11 +68,16 @@ class AssertionParser:
                 self._assertion2test(i)
 
     def _assertion2test(self, assertion):
-        self.assertions_for_comments.append(assertion.strip())
-        self.test_assertions += f"""try:
-    test_assertions.append({assertion.strip()})
+        for j in assertion.split('\n\n'):
+
+            if ' ==' in j or ' !=' in j:
+                self.assertions_for_comments.append(j.strip())
+                self.test_assertions += f"""try:
+    test_assertions.append({j.strip()})
 except:
     test_assertions.append(False)\n"""
+            else:
+                self.test_assertions += f"{j}\n"
 
     @staticmethod
     def _conditions2comment(failed_assertions, assertions):
@@ -102,10 +100,7 @@ except:
 if __name__ == '__main__':
     from sample_homeworks.with_assertions.assertions import hidden_assertions
 
-    sample_code1 = """def email_to_username(a):
-    return a.split('@')[0]"""
-
-    sample_code2 = """asdasdasd"""
+    sample_code1 = """
+    """
     assertion_parser = AssertionParser(hidden_assertions=hidden_assertions)
-    print(assertion_parser(code_cell=sample_code1, problem_id=3))
-    print(assertion_parser(code_cell=sample_code2, problem_id=3))
+    print(assertion_parser(code_cell=sample_code1, problem_id=2))
