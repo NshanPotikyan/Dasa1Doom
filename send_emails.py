@@ -22,8 +22,8 @@ if __name__ == '__main__':
     assert subject, "The subject should be provided"
     # student ids, names, grades
     students2grades = um.grades2dict(path=path, to_csv=True)
-    students2emails = um.get_student_info(sc.student_ids, emails=True)
-    students2ids = um.get_student_info(sc.student_ids, emails=False)
+    students2emails = um.get_student_info(args.student_ids, emails=True)
+    students2ids = um.get_student_info(args.student_ids, emails=False)
     notebooks = um.get_files(path, 'ipynb')
     students2notebooks = {um.get_student_name(v): v for v in notebooks}
 
