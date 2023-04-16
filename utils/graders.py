@@ -220,6 +220,7 @@ class Grader:
 
         self.grades_to_txt()
 
+
     def grade_per_problem(self):
         """
         Performs the grading per problem
@@ -394,6 +395,7 @@ class Grader:
         with open(os.path.join(self.save_dir, 'results.txt'), 'w') as f:
             for name, i in self.student_ids.items():
                 f.write(f'{i}  {name}   {self.grade_dict.get(name, -1)}\n')
+        um.grades2dict(path=self.save_dir, file_name='results.txt', to_csv=True)
 
     def _execute(self, repeat=False):
         """
