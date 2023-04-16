@@ -44,6 +44,7 @@ class AssertionParser:
 
         except Exception as e:
             return 0, f'{cf.all_incorrect} ({e})'
+        # TODO: include assertions with Pass/Not Pass info
         comment = self._conditions2comment(failed_assertions, assertions)
         return grade, comment
 

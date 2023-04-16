@@ -127,6 +127,7 @@ class Grader:
         for hw in tqdm(self.files):
 
             self.assertion_parser.import_dependencies()
+            # TODO: remove the globals after previous student
 
             # get student name from the file name (e.g. HW1_Loops_PoghosPoghosyan.ipynb)
             student = um.get_student_name(file_name=hw)
@@ -219,7 +220,6 @@ class Grader:
                 un.save_notebook(file_dict=notebook, file_name=hw, save_dir=self.save_dir)
 
         self.grades_to_txt()
-
 
     def grade_per_problem(self):
         """
