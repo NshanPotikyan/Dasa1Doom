@@ -4,6 +4,7 @@ from tqdm import tqdm
 from configs import general as cf
 import utils.notebook as un
 import utils.misc as um
+from utils.script_converter import convert2script
 
 
 class Grader:
@@ -140,6 +141,9 @@ class Grader:
             # open and read the notebook file
             notebook = un.notebook_to_dict(file_name=hw)
 
+            # notebook to script
+            # convert2script(notebook_path=hw, script_name=student)
+
             # we are interested in the cells
             cells = notebook['cells'].copy()
             nr_cells = len(cells)
@@ -164,29 +168,16 @@ class Grader:
 
                     problem_nr += 1
 
-                    # check if the problem is already graded
-                    try:
-
-                        grade_cell = un.join(cells[i + 2 + self.with_assertions]['source'])
-                        if cf.grade_title in grade_cell and cf.total_grade_title not in grade_cell:
-                            grade = float(grade_cell.split(' ')[-1])
-                            self.grade_dict[student] = self.grade_dict.get(student, 0) + grade
-
-                            if self.save_comments:
-                                comment_cell = un.join(cells[i + 3 + self.with_assertions]['source'])
-                                self.comments[problem_nr] = self.comments.get(problem_nr, '') + \
-                                                            comment_cell.split('</font> ')[-1] + '\n'
-                            continue
-                    except IndexError:
-                        # handling the case when the last problem is not graded yet
-                        pass
+                    if self._is_graded(cells, i, student, problem_nr):
+                        continue
 
                     all_checked = False
 
                     # code will be in the next cell
                     code = un.join(cells[i + 1]['source'])
 
-                    grade, comment = self.get_grade_comment(cell, code, problem_nr)
+                    grade, comment = self.get_grade_comment(cell, code, problem_nr, student=student)
+                    quit()
 
                     if grade == 'ignore':
                         # the student's work will be ignored
@@ -220,6 +211,24 @@ class Grader:
                 un.save_notebook(file_dict=notebook, file_name=hw, save_dir=self.save_dir)
 
         self.grades_to_txt()
+
+    def _is_graded(self, cells, i, student, problem_nr):
+        # check if the problem is already graded
+        try:
+            grade_cell = un.join(cells[i + 2 + self.with_assertions]['source'])
+            if cf.grade_title in grade_cell and cf.total_grade_title not in grade_cell:
+                grade = float(grade_cell.split(' ')[-1])
+                self.grade_dict[student] = self.grade_dict.get(student, 0) + grade
+
+                if self.save_comments:
+                    comment_cell = un.join(cells[i + 3 + self.with_assertions]['source'])
+                    self.comments[problem_nr] = self.comments.get(problem_nr, '') + \
+                                                comment_cell.split('</font> ')[-1] + '\n'
+                return True
+        except IndexError:
+            # handling the case when the last problem is not graded yet
+            pass
+        return False
 
     def grade_per_problem(self):
         """

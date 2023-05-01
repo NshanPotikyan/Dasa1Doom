@@ -3,6 +3,11 @@ import glob
 import pandas as pd
 
 
+def remove_difference(dict_before, dict_after):
+    # TODO: remove keys that are in dict_after, but not in dict_before
+    pass
+
+
 def get_file(files, file_name, letter_tolerance=0):
     """
     Finds the file by tolerating spelling errors in the file name

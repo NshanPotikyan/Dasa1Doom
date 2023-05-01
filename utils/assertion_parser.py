@@ -1,4 +1,7 @@
+import os
+
 from configs import general as cf
+from utils.misc import remove_difference
 
 
 class AssertionParser:
@@ -38,12 +41,16 @@ class AssertionParser:
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"
         final_code = f"{only_code}\n{self.test_assertions}\n{grade_str}\n{failed}"
-
+        dict_before = globals()
         try:
             exec(final_code, globals())
-
+            dict_after = globals()
         except Exception as e:
             return 0, f'{cf.all_incorrect} ({e})'
+
+        # remove newly defined names
+        remove_difference(dict_before=dict_before, dict_after=dict_after)
+
         # TODO: include assertions with Pass/Not Pass info
         comment = self._conditions2comment(failed_assertions, assertions)
         return grade, comment
