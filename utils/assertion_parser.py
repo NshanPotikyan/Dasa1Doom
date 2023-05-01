@@ -41,6 +41,8 @@ class AssertionParser:
         grade_str = f"grade = sum(test_assertions)/{self.nr_assertions}"
         failed = f"failed_assertions = [{self.assertions_for_comments}[i] for i, test in enumerate(test_assertions) if test == False]"
         final_code = f"{only_code}\n{self.test_assertions}\n{grade_str}\n{failed}"
+        globals()['grade'] = None
+        globals()['comment'] = None
         dict_before = globals()
         try:
             exec(final_code, globals())
@@ -48,11 +50,12 @@ class AssertionParser:
         except Exception as e:
             return 0, f'{cf.all_incorrect} ({e})'
 
+        # TODO: include assertions with Pass/Not Pass info
+        comment = self._conditions2comment(failed_assertions, assertions)
+
         # remove newly defined names
         remove_difference(dict_before=dict_before, dict_after=dict_after)
 
-        # TODO: include assertions with Pass/Not Pass info
-        comment = self._conditions2comment(failed_assertions, assertions)
         return grade, comment
 
     def _process_assertions(self, assertions):

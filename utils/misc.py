@@ -5,7 +5,9 @@ import pandas as pd
 
 def remove_difference(dict_before, dict_after):
     # TODO: remove keys that are in dict_after, but not in dict_before
-    pass
+    keys_to_remove = set(dict_after) - set(dict_before)
+    for key in keys_to_remove:
+        del globals()[key]
 
 
 def get_file(files, file_name, letter_tolerance=0):

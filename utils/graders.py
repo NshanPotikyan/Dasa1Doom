@@ -176,8 +176,7 @@ class Grader:
                     # code will be in the next cell
                     code = un.join(cells[i + 1]['source'])
 
-                    grade, comment = self.get_grade_comment(cell, code, problem_nr, student=student)
-                    quit()
+                    grade, comment = self.get_grade_comment(cell, code, problem_nr)
 
                     if grade == 'ignore':
                         # the student's work will be ignored
