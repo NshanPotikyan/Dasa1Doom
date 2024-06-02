@@ -164,7 +164,6 @@ def find_cell_id_per_notebook(files, file_name, some_text=None):
         # get all the cells in str format
         cells = [join(cells[idx]['source']) for idx in range(nr_cells)]
 
-
     # get the index of the cell containing the i-th problem
     try:
         idx = get_cell_id(cells=cells, some_text=some_text)
