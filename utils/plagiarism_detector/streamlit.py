@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 import utils.notebook as un
 import utils.misc as um
@@ -8,6 +9,7 @@ from utils.code_similarity import detect, summarize
 
 
 class PlagiarismDetectorStreamlit:
+    skip_commands = ['pip', 'unzip', 'wget']
     """
     :param str path: defines the directory where the notebooks are
     :param float tol_level: the sensitivity/confidence of the detection
@@ -38,20 +40,23 @@ class PlagiarismDetectorStreamlit:
 
         st.title("Plagiarism Detector")
 
-        pycode_list, names = self.get_codes_names(files, students)
+        pycode_list, cells, names = self.get_codes_names(files, students)
 
         nr_codes = len(pycode_list)
         candidates = []
         for i in range(nr_codes):
             try:
                 results = detect(pycode_list[i:], keep_prints=True, module_level=True)
-            except SyntaxError:
+            except SyntaxError as e:
+                print(e, 'Check the code, maybe there are bash commands.')
                 continue
             for index, func_ast_diff_list in results:
                 sum_plagiarism_percent, _, _ = summarize(func_ast_diff_list)
                 if sum_plagiarism_percent > self.tol_level:
                     candidates.append({
                         'code1': pycode_list[i],
+                        'notebook1': cells[i],
+                        'notebook2': cells[i + index],
                         'code2': pycode_list[i + index],
                         'name1': names[i],
                         'name2': names[i + index],
@@ -62,16 +67,23 @@ class PlagiarismDetectorStreamlit:
             st.session_state.idx = 0
             st.session_state.cheaters = []
 
+        if len(candidates) == 0:
+            st.success('No cheaters were found.')
+            st.stop()
+
         c1, c2 = st.columns(2)
         pair = candidates[st.session_state.idx]
 
         if st.button('Display'):
             with c1:
                 st.info(pair['name1'])
-                st.code(pair['code1'])
+                for cell in pair['notebook1']:
+                    un.display_notebook_cell(cell)
+
             with c2:
                 st.info(pair['name2'])
-                st.code(pair['code2'])
+                for cell in pair['notebook2']:
+                    un.display_notebook_cell(cell)
 
         if st.session_state.idx == len(candidates) - 1:
 
@@ -81,6 +93,10 @@ class PlagiarismDetectorStreamlit:
             if st.button("Finish", key="finish"):
                 st.success('The job is completed.')
                 st.info(f'{st.session_state.cheaters}')
+
+                with open(os.path.join(self.path, 'cheaters.txt'), 'w') as f:
+                    f.write(f'{st.session_state.cheaters}')
+
                 st.stop()
 
         if st.button("Penalize", key="penalize"):
@@ -94,20 +110,41 @@ class PlagiarismDetectorStreamlit:
                 st.session_state.idx += 1
 
     @staticmethod
-    def get_code_per_problem(files, student):
-        return un.find_cell_id_per_notebook(files=files,
-                                            file_name=student)
+    def get_code_per_problem(files, student, skip_commands):
+        file_name = um.get_file(files=files, file_name=student, letter_tolerance=1)
+
+        notebook = un.notebook_to_dict(file_name)
+
+        cells = notebook['cells'].copy()
+        nr_cells = len(cells)
+
+        code = []
+        skip = False
+        for idx in range(nr_cells):
+            if cells[idx]['cell_type'] == 'code':
+                for skip_command in skip_commands:
+                    if any([skip_command in c for c in cells[idx]['source']]):
+                        skip = True
+                if skip:
+                    continue
+                code.append(un.join(cells[idx]['source']))
+
+        code = '\n'.join(code)
+
+        return code, cells
 
     def get_codes_names(self, files, students):
         codes = []
         names = []
+        cells = []
 
         for j, student in enumerate(students):
-            code = self.get_code_per_problem(files, student)
+            code, cell = self.get_code_per_problem(files, student, skip_commands=self.skip_commands)
 
             if code is None:
                 continue
 
             codes.append(code)
+            cells.append(cell)
             names.append(student)
-        return codes, names
+        return codes, cells, names

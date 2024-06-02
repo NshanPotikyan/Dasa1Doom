@@ -1,5 +1,7 @@
 import streamlit as st
 import base64
+import json
+import os
 
 import utils.notebook as un
 import utils.misc as um
@@ -25,29 +27,27 @@ class GraderStreamlit:
 
         if 'idx' not in st.session_state:
             st.session_state.idx = 0
+            st.session_state.grades = {}
 
         hw = all_notebooks[st.session_state.idx]
 
         if st.button('Display'):
             st.info(students[st.session_state.idx])
 
-            for i, cell in enumerate(hw):
+            for cell in hw:
+                un.display_notebook_cell(cell)
 
-                if cell['cell_type'] == 'code':
-                    st.code(un.join(cell['source']))
-                    for output in cell['outputs']:
-                        if 'text' in output:
-                            st.info(un.join(output['text']))
-                        elif 'data' in output:
-                            st.image(base64.b64decode(output['data']['image/png']))
+        grade = st.number_input("Insert a grade")
 
-                else:
-                    st.markdown(un.join(cell['source']), unsafe_allow_html=True)
+        if grade:
+            st.session_state.grades[students[st.session_state.idx]] = grade
 
         if st.session_state.idx == nr_notebooks - 1:
 
             if st.button("Finish", key="finish"):
                 st.success('The job is completed.')
+                st.code(str(st.session_state.grades))
+                json.dump(str(st.session_state.grades), open(os.path.join(self.path, 'grades.json'), 'w'))
                 st.stop()
 
         if st.button("Next", key="next"):

@@ -171,3 +171,27 @@ def find_cell_id_per_notebook(files, file_name, some_text=None):
         raise Exception(f'{some_text} was not found.\
          Make sure you search the correct text.')
     return file_name, notebook, cells, idx
+
+
+def display_notebook_cell(cell):
+    import streamlit as st
+    import base64
+
+    if cell['cell_type'] == 'code':
+        st.code(join(cell['source']))
+        for output in cell['outputs']:
+            if 'text' in output:
+                st.info(join(output['text']))
+            elif 'data' in output:
+                if 'image/png' in output['data']:
+                    st.image(base64.b64decode(output['data']['image/png']))
+                else:
+                    if 'text/html' in output['data']:
+                        table = output['data']['text/html']
+                        idx = len(table)
+                        if '    <div class="colab-df-buttons">\n' in table:
+                            idx = table.index('    <div class="colab-df-buttons">\n')
+                        st.markdown(join(table[:idx]), unsafe_allow_html=True)
+
+    else:
+        st.markdown(join(cell['source']), unsafe_allow_html=True)
