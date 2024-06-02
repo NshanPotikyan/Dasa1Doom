@@ -133,7 +133,7 @@ def save_notebook(save_dir, file_name, file_dict, update=False, files=None):
     return files
 
 
-def find_cell_id_per_notebook(files, file_name, some_text):
+def find_cell_id_per_notebook(files, file_name, some_text=None):
     """
     Processes the notebook file and returns the id of the cell
     that starts with the given condition.
@@ -157,8 +157,13 @@ def find_cell_id_per_notebook(files, file_name, some_text):
     cells = notebook['cells'].copy()
     nr_cells = len(cells)
 
-    # get all the cells in str format
-    cells = [join(cells[idx]['source']) for idx in range(nr_cells)]
+    if some_text is None:
+        # get all code cells
+        return '\n'.join([join(cells[idx]['source']) for idx in range(nr_cells) if cells[idx]['cell_type'] == 'code'])
+    else:
+        # get all the cells in str format
+        cells = [join(cells[idx]['source']) for idx in range(nr_cells)]
+
 
     # get the index of the cell containing the i-th problem
     try:
