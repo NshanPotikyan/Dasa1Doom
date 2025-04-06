@@ -1,5 +1,4 @@
 import streamlit as st
-import base64
 import json
 import os
 
@@ -12,16 +11,16 @@ class GraderStreamlit:
         self.path = path
 
     def grade(self):
-        files = um.get_files(path=self.path, file_type='ipynb')
-        students = [um.get_student_name(file) for file in files]
-        self.run(files=files, students=students)
+        student2file = um.get_files(path=self.path, file_type='ipynb')
+        self.run(student2file)
 
-    def run(self, files, students):
+    def run(self, student2file):
         st.set_page_config(layout="wide", page_icon="", page_title="Grader", )
 
         st.title("Homework Grader")
 
-        all_notebooks = [self.get_notebook(files, student) for student in students]
+        all_notebooks = [self.get_notebook(file) for file in student2file.values()]
+        students = list(student2file.keys())
 
         nr_notebooks = len(all_notebooks)
 
@@ -56,14 +55,7 @@ class GraderStreamlit:
                 st.session_state.idx += 1
 
     @staticmethod
-    def get_notebook(files, file_name):
-        file_name = um.get_file(files=files,
-                                file_name=file_name,
-                                letter_tolerance=1)
-
-        if file_name is None:
-            return None
-
+    def get_notebook(file_name):
         notebook = un.notebook_to_dict(file_name)
 
         return notebook['cells'].copy()

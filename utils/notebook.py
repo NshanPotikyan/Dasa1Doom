@@ -2,7 +2,6 @@ import os
 import json
 
 import utils.misc as um
-import configs.general as cf
 
 
 def join(text):
@@ -41,49 +40,6 @@ def dict_to_notebook(some_dict, file_name):
         file_name = file_name.name
     with open(file_name, mode='w') as f:
         json.dump(some_dict, f)
-
-
-def insert_cell(notebook, position, content, content_type):
-    """
-    Inserts a new text cell inside the given notebook
-    :param notebook: dict of the JN file
-    :param position: int of the cell positional index
-    :param content: str of the content that needs to be added
-    :param content_type: str of the content type, currently it can be one of these
-                         'grade', 'comment', 'total_grade'
-    :return: dict of the modified JN file
-    """
-    notebook['cells'].insert(position,
-                             create_new_cell(content=content,
-                                             content_type=content_type))
-    return notebook
-
-
-def create_new_cell(content, content_type):
-    """
-    Generates a new text cell that will be added to the existing notebook
-    :param content: str of the content that needs to be added
-    :param content_type: str of the content type, currently it can be one of these
-                         'grade', 'comment', 'total_grade', 'empty'
-    :return:
-    """
-    if content_type == 'grade':
-        title = f"<font color='red'>**{cf.grade_title}:**</font>"
-    elif content_type == 'empty':
-        title = ""
-        content = ""
-    elif content_type == 'comment':
-        title = f"<font color='red'>**{cf.comment_title}:**</font>"
-    elif content_type == 'total_grade':
-        title = f"<font color='red'>**{cf.total_grade_title}:**</font>"
-    else:
-        raise Exception(f"""The content_type was not specified correctly.
-        Should be one of these 'grade', 'comment', 'total_grade', 'empty', but {content_type}
-        was provided.
-        """)
-    return {'cell_type': 'markdown',
-            'metadata': {'id': ''},
-            'source': [f'{title} {content}']}
 
 
 def get_cell_id(cells, some_text):

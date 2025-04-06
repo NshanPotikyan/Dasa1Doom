@@ -4,7 +4,6 @@ import os
 import utils.notebook as un
 import utils.misc as um
 
-from configs import general as cf
 from utils.code_similarity import detect, summarize
 
 
@@ -19,17 +18,17 @@ class PlagiarismDetectorStreamlit:
 
     def __init__(self,
                  path,
-                 tol_level=cf.plagiarism_tol_level,
+                 tol_level=0.9,
                  ):
         self.path = path
         self.tol_level = tol_level
 
     def detect(self):
-        files = um.get_files(path=self.path, file_type='ipynb')
-        students = [um.get_student_name(file) for file in files]
-        self.run(files=files, students=students)
+        student2file = um.get_files(path=self.path, file_type='ipynb')
+        # students = [um.get_student_name(file) for file in files]
+        self.run(student2file)
 
-    def run(self, files, students):
+    def run(self, student2file):
         """
         Goes over all the problems for each student
         searches for potential plagiarism, asks the user to double check the detection
@@ -40,7 +39,7 @@ class PlagiarismDetectorStreamlit:
 
         st.title("Plagiarism Detector")
 
-        pycode_list, cells, names = self.get_codes_names(files, students)
+        pycode_list, cells, names = self.get_codes_names(student2file)
 
         nr_codes = len(pycode_list)
         candidates = []
@@ -110,8 +109,7 @@ class PlagiarismDetectorStreamlit:
                 st.session_state.idx += 1
 
     @staticmethod
-    def get_code_per_problem(files, student, skip_commands):
-        file_name = um.get_file(files=files, file_name=student, letter_tolerance=1)
+    def get_code_per_problem(file_name, skip_commands):
 
         notebook = un.notebook_to_dict(file_name)
 
@@ -133,13 +131,14 @@ class PlagiarismDetectorStreamlit:
 
         return code, cells
 
-    def get_codes_names(self, files, students):
+    def get_codes_names(self, student2file):
         codes = []
         names = []
         cells = []
 
-        for j, student in enumerate(students):
-            code, cell = self.get_code_per_problem(files, student, skip_commands=self.skip_commands)
+        for student in student2file:
+            code, cell = self.get_code_per_problem(file_name=student2file[student],
+                                                   skip_commands=self.skip_commands)
 
             if code is None:
                 continue

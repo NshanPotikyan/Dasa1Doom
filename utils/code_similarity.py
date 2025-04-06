@@ -4,7 +4,8 @@ import operator
 import argparse
 import itertools
 
-from collections import Counter, Sequence
+from collections import Counter
+from collections.abc import Sequence
 
 
 class BaseNodeNormalizer(ast.NodeTransformer):
