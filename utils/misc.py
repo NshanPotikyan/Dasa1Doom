@@ -10,36 +10,6 @@ def remove_difference(dict_before, dict_after):
         del globals()[key]
 
 
-# def get_file(files, file_name, letter_tolerance=0):
-#     """
-#     Finds the file by tolerating spelling errors in the file name
-#     :param list[str] files:
-#     :param str file_name: file name
-#     :param letter_tolerance: int of the number of letters that can be misspelled
-#     :return:
-#     """
-#     if not letter_tolerance:
-#         # in case we do not care aboust spelling errors
-#         return files[files.index(file_name)]
-#
-#     similarity = 10
-#     for idx, file in enumerate(files):
-#         if file_name in file:
-#             return file
-#         name = file[-len(file_name):]
-#         current_similarity = hamming_dist(file_name, name)
-#         if current_similarity < similarity:
-#             similarity = current_similarity
-#             best_idx = idx
-#     if similarity <= letter_tolerance:
-#         return files[best_idx]
-#     else:
-#         print(f"{file_name}'s file was not found, \
-#         please make sure the file name was written correctly otherwise \
-#         the file is considered not submitted.")
-#         return None
-
-
 def grades2dict(path, file_name='results.txt', to_csv=False):
     """
     Collects the grades from txt file into a dict and
@@ -128,29 +98,6 @@ def get_grade(text):
     submit = form.form_submit_button("Add a comment")
     if submit:
         return grade
-
-
-# def get_student_name(file_name):
-#     """
-#     Parses student name from file name.
-#
-#     :param str file_name: should be of the following format something_name.ipynb
-#     :returns: student name
-#     :rtype: str
-#     """
-#     if not isinstance(file_name, str):
-#         # the case of streamlit
-#         file_name = file_name.name
-#
-#     file_name = os.path.basename(file_name)
-#     nr_underscores = file_name.count('_')
-#     splits = file_name.split('_')
-#     if nr_underscores <= 2:
-#         # in case namesurname.ipynb or name-surname.ipynb
-#         return remove_symbols(splits[-1][:-6])
-#     elif nr_underscores == 3:
-#         # in case name_surname.ipynb
-#         return splits[-2] + splits[-1][:-6]
 
 
 def remove_symbols(name):
